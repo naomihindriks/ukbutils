@@ -1,0 +1,6 @@
+#,Code,Meaning
+1,1,Direct entry
+2,2,Manual entry of full results
+3,3,Manual measurement of weight only
+4,4,Not performed
+5,-1,Question not asked due to previous answers
