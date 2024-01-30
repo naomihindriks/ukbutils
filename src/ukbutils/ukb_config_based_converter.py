@@ -489,36 +489,7 @@ def main_cli():
 
     logging.info("Script done running, exiting...")
     sys.exit(0)
-    
+
 
 if __name__ == "__main__":
     main_cli()
-    # # Function to run when program termination signal is recieved, will write a line to logfile
-    # signal.signal(signal.SIGTERM, utils.terminate_signal_handler)
-   
-    # # Parse arguments
-    # args = parse_args()
-
-    # # Set log file
-    # set_logfile(args)
-
-    # logging.info("Parsed following args: {args}".format(
-    #     args = ", ".join([f"\n\t{arg}: {getattr(args, arg)}" for arg in vars(args)])
-    # ))
-
-    # try:
-    #     main(
-    #         tsv_filename = args.ukb_file.name,
-    #         html_filename = args.html_data_dict.name,
-    #         config_filename = args.config_file.name
-    #     )
-    # except Exception as e:
-    #     utils.exit_script(
-    #         f"An exception occured during the execution of the {__file__} script.", 
-    #         log_function=logging.exception, 
-    #         status=1, 
-    #         exit_message=f"An exception while converting UKB files from config {args.config_file.name}, see {logging.getLoggerClass().root.handlers[0].baseFilename}"
-    #     )
-
-    # logging.info("Script done running, exiting...")
-    # sys.exit(0)

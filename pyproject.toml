@@ -1,0 +1,74 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ukbutils"
+version = "0.0.1"
+description = 'Functions and CLI tools for working with UK Biobank main dataset'
+readme = {file = "README.txt", content-type = "text/markdown"}
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+keywords = ["UK Biobank", "parquet", "file conversion"]
+authors = [
+  { name = "Naomi Hindriks", email = "n.j.hindriks@gmail.com" },
+]
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: Unix",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    'pandas>=2.2.0',
+    'beautifulsoup4>=4.0.0',
+    'pyyaml>=6.0.0',
+    'dask>=2024.1.1',
+    'lxml>=5.0.0',
+    "pyarrow>=12.0.0"
+    "numpy>=1.26.0"
+]
+
+[project.scripts]
+ukb-parquet-from-config = "ukbutils.ukb_config_based_converter:main_cli"
+ukb-to-parquet = "ukbutils.ukb_tsv_to_parquet:main_cli"
+
+[project.urls]
+Homepage = "https://github.com/naomihindriks/UKB_utils"
+
+[project.optional-dependencies]
+dev = [
+    "pytest"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+
+[tool.flake8]
+exclude = [
+    "__init__.py",
+    "__pycache__",
+    "*/.ipynb_checkpoints",
+    ".git",
+]
+max-line-length = 88
+count = true
+
+# addopts = [
+#     "--import-mode=importlib",
+# ]
