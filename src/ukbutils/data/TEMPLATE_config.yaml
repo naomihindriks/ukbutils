@@ -1,0 +1,56 @@
+# Template will be ignored by the create_parquet_from_config.py script
+---
+Template:
+    # Output directory path
+    out_path: "dir_path"
+    # Number of rows of the original data to keep to write to parquet file if set to 0 the value will be ignored
+    nrows: 0  
+    # Number of partitions to repartition to if set to 0 the value will be ignored (repartitioning will happen after potential row splicing depending on value in nrows)
+    npartitions: 0
+    # Number of extra tabs expected at the start or end of each data row in the TSV file. Use a positive number to indicate tabs at the end of a data row or a negative number to indicate tabs at the start of data rows
+    tab_offset: 0
+    # Force the operation if output directory is not empty 
+    force: False
+    # What dtype to convert the UKB types to
+    dtype_dict:
+        Type:
+        # Conversions for types (in data dict Type column)
+            Sequence: "int"
+            Integer: "float"
+            Continuous: "float"
+            Text: "string"
+            Date:
+                - "Date" 
+                - "%Y-%m-%d"
+            Time: 
+                - "Date"
+                - "%Y-%m-%d %H:%M:%S"
+            Curve: "string"
+        Encoding_type:
+        # Conversion for categories (in data dict Ecoding_type column) if there are more than x amount of categories.
+            Integer: "float"
+            Real: "float"
+            ERROR: 
+                - "Date"
+                - "%Y-%m-%d"
+            String: "string"
+
+    categorical_type:
+        - "Categorical (single)"
+        - "Categorical (multiple)"
+    # Maximum
+    max_categories: 256
+    
+    # Settings to use for the dask to_parquet method.
+    settings:
+        compression: "snappy"
+        engine: "pyarrow"
+        write_index: True
+        write_metadata_file: True
+        overwrite: False
+...
+
+
+---
+# Your config here
+...
