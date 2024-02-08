@@ -8,7 +8,11 @@ configuration file. It uses the `ukb_tsv_to_parquet` module for the conversion
 process.
 
 Usage:
-    python ukb_config_based_converter.py <ukb_file> <html_data_dict> <config_file> [--log-dir <logdir>] [--log-file-name <logfile>] [--log-level <loglevel>]
+    python ukb_config_based_converter.py \
+    <ukb_file> <html_data_dict> <config_file> \
+    [--log-dir <logdir>] \
+    [--log-file-name <logfile>] \
+    [--log-level <loglevel>]
 
 Parameters:
     <ukb_file> (str): Path to the UK Biobank TSV file.
@@ -26,7 +30,11 @@ Optional Arguments:
         options are: 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. Default is INFO.
 
 Example:
-    python ukb_config_based_converter.py data.tsv data_dict.html config.yaml --log-dir logs/ --log-file-name mylog.log --log-level DEBUG
+    python ukb_config_based_converter.py \
+        data.tsv data_dict.html config.yaml \
+        --log-dir logs/ \
+        --log-file-name mylog.log \
+        --log-level DEBUG
 """
 
 import logging
