@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=69.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,7 +7,7 @@ name = "ukbutils"
 version = "0.0.1"
 description = 'Functions and CLI tools for working with UK Biobank main dataset'
 readme = {file = "README.txt", content-type = "text/markdown"}
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {file = "LICENSE"}
 keywords = ["UK Biobank", "parquet", "file conversion"]
 authors = [
@@ -20,7 +20,6 @@ classifiers = [
   "Operating System :: Unix",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
@@ -28,11 +27,11 @@ classifiers = [
 ]
 dependencies = [
     'pandas>=2.2.0',
-    'beautifulsoup4>=4.0.0',
+    'beautifulsoup4>=4.12.0',
     'pyyaml>=6.0.0',
     'dask>=2024.1.1',
     'lxml>=5.0.0',
-    "pyarrow>=12.0.0"
+    "pyarrow>=15.0.0",
     "numpy>=1.26.0"
 ]
 
@@ -41,11 +40,17 @@ ukb-parquet-from-config = "ukbutils.ukb_config_based_converter:main_cli"
 ukb-to-parquet = "ukbutils.ukb_tsv_to_parquet:main_cli"
 
 [project.urls]
-Homepage = "https://github.com/naomihindriks/UKB_utils"
+Homepage = "https://github.com/naomihindriks/ukbutils"
 
 [project.optional-dependencies]
 dev = [
-    "pytest"
+    "pytest>=8.0.0",
+    "tox>=3.27.1, <4",
+    "tox-conda>=0.10.2",
+    "flake8>=7.0.0",
+    "black>=24.1.1",
+    "flake8-black>=0.3.6"
+    # "tox-gh-actions"
 ]
 
 [tool.setuptools]
@@ -58,17 +63,6 @@ where = ["src"]
 testpaths = [
     "tests",
 ]
-
-[tool.flake8]
-exclude = [
-    "__init__.py",
-    "__pycache__",
-    "*/.ipynb_checkpoints",
-    ".git",
+addopts = [
+    "--import-mode=importlib",
 ]
-max-line-length = 88
-count = true
-
-# addopts = [
-#     "--import-mode=importlib",
-# ]
