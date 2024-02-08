@@ -19,7 +19,20 @@ TODO:
         will be more readable
 
 Usage:
-    python ukb_tsv_to_parquet.py <ukb_file> <out_dir> <data_dict> [-e ENCODING] [-n NROWS] [-r REPARTITION] [-m MAX_CATEGORIES] [-dt DTYPE_DICT_TYPE ...] [-de DTYPE_DICT_ENCODING ...] [-s SETTINGS ...] [-t TAB_OFFSET] [-f] [--log-dir LOGDIR] [--log-file-name LOGFILE] [--log-level LOGLEVEL]
+    python ukb_tsv_to_parquet.py \
+        <ukb_file> <out_dir> <data_dict> \
+        [-e ENCODING] \
+        [-n NROWS] \
+        [-r REPARTITION] \
+        [-m MAX_CATEGORIES] \
+        [-dt DTYPE_DICT_TYPE ...] \
+        [-de DTYPE_DICT_ENCODING ...] \
+        [-s SETTINGS ...] \
+        [-t TAB_OFFSET] \
+        [-f] \
+        [--log-dir LOGDIR] \
+        [--log-file-name LOGFILE] \
+        [--log-level LOGLEVEL]
 
 Arguments:
     <ukb_file>: Path to the UK Biobank TSV file.
@@ -74,12 +87,17 @@ import signal
 import argparse
 import datetime
 import json
-import dask.dataframe as dd
 import yaml
 from pathlib import Path
 import subprocess as sp
 import numpy as np
 import pandas as pd
+
+import dask
+import dask.dataframe as dd
+from dask.distributed import Client, LocalCluster, get_client
+import time
+
 
 # Custom scripts
 from ukbutils.UKB_data_dict import UKB_DataDict
@@ -691,24 +709,33 @@ def get_dask_dataframe(
     date_format_dict = get_date_format_dict(col_names, data_dict,
                                             dtype_dict, max_categories)
 
+    date_col_type_dict = {date_col: "string" for date_col in date_format_dict.keys()}
+    types.update(date_col_type_dict)
+
     logging.info(f"Calling the dask read_table function for {tsv_file},"
-                 " encoding set to {encoding}")
+                 f" encoding set to {encoding}")
     ddf = dd.read_table(
         urlpath=tsv_file,
         encoding=encoding,
         header=0,
         usecols=col_names,
         names=col_names_with_offset,
-        dtype=types,
-        parse_dates=list(date_format_dict.keys()),
-        date_format=date_format_dict
+        dtype=types
+        # parse_dates=list(date_format_dict.keys()),
+        # date_format=date_format_dict
     )
+
+    for date_col in date_col_type_dict:
+        logging.debug(f"Parsing column {date_col} to datetime format"
+                      f"{date_format_dict[date_col]}")
+        ddf[date_col] = dd.to_datetime(ddf[date_col],
+                                       format=date_format_dict[date_col])
 
     # Capture and log info on loaded dataframe
     with utils.capture() as result_string:
         ddf.info()
     logging.info("Sucesfully loaded data as dask dataframe. Dataframe"
-                 f" info:\n{result_string["stdout"]}")
+                 f" info:\n{result_string['stdout']}")
 
     return ddf
 
@@ -943,6 +970,31 @@ def convert_to_parquet(
     Returns:
         None
     """
+    try:
+        client = get_client()
+        logging.info(f"Found client: {client}")
+    except ValueError:
+        filtered_config_defaults = list(filter(lambda x: "distributed" in x.keys(), dask.config.defaults))
+        if len(filtered_config_defaults) == 1:
+            distributed_defaults = filtered_config_defaults[0]
+            default_dashboard_link = distributed_defaults["distributed"]["dashboard"]["link"]
+        else:
+            raise ValueError("Dask default config does not have the correct format")
+
+        default_dashboard_link = default_dashboard_link
+        dask.config.set({"distributed.dashboard.link": default_dashboard_link})
+    
+        cluster = LocalCluster(n_workers=2, dashboard_address=':8787')
+        client = Client(cluster)
+    
+    logging.info(f"Using client: {client}")
+    logging.info(f"Client dashboard_link set to: {client.dashboard_link}")
+
+    # Sleep for a specified duration 
+    # sleep_duration = 30
+    # distributed.print("Sleeping for {sleep_duration} seconds to allow time for testing the dashboard.", file=sys.stdout)
+    # time.sleep(sleep_duration)
+
     ddf = get_dask_dataframe(
         tsv_file=tsv_file_in,
         col_names=column_names,
