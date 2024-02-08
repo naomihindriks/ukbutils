@@ -24,7 +24,7 @@ Template:
                 - "%Y-%m-%d"
             Time: 
                 - "Date"
-                - "%Y-%m-%d %H:%M:%S"
+                - "%Y-%m-%dT%H:%M:%S"
             Curve: "string"
         Encoding_type:
         # Conversion for categories (in data dict Ecoding_type column) if there are more than x amount of categories.
@@ -46,7 +46,7 @@ Template:
         compression: "snappy"
         engine: "pyarrow"
         write_index: True
-        write_metadata_file: True
+        write_metadata_file: False
         overwrite: False
 ...
 
