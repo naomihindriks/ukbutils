@@ -4,8 +4,7 @@ import contextlib
 import io
 
 
-def exit_script(log_message, log_function=logging.info, status=0,
-                exit_message=None):
+def exit_script(log_message, log_function=logging.info, status=0, exit_message=None):
     if status == 0:
         eval("log_function")(log_message)
         sys.exit(0)
@@ -15,10 +14,7 @@ def exit_script(log_message, log_function=logging.info, status=0,
             sys.exit(exit_message)
         else:
             print(logging.getLoggerClass().root.handlers[0])
-            log_file_name = logging \
-                .getLoggerClass() \
-                .root.handlers[0] \
-                .baseFilename
+            log_file_name = logging.getLoggerClass().root.handlers[0].baseFilename
             sys.exit(
                 "An error occured while the script was running,"
                 "more information can be found in the log file"
@@ -30,9 +26,12 @@ def terminate_signal_handler(signal, frame):
     """
     Signal handler for termination signal.
     """
-    exit_script("Process was prematurely terminated",
-                log_function=logging.error, status=1,
-                exit_message=signal)
+    exit_script(
+        "Process was prematurely terminated",
+        log_function=logging.error,
+        status=1,
+        exit_message=signal,
+    )
 
 
 @contextlib.contextmanager

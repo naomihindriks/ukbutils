@@ -67,7 +67,7 @@ FALLBACK_VALUES = {
     "max_categories": tsv2parquet.DEFAULT_MAX_CATEGORIES,
     "categorical_type": tsv2parquet.DEFAULT_CATEGORICAL_COLUMNS,
     "encoding": tsv2parquet.DEFAULT_ENCODING,
-    "settings": {}
+    "settings": {},
 }
 
 
@@ -88,24 +88,28 @@ def parse_args():
     'WARNING', 'ERROR', or 'CRITICAL'.
     """
     arg_parser = argparse.ArgumentParser(
-        description=("Convert UK Biobank TSV data to Parquet format based on a"
-                     "configuration file.")
+        description=(
+            "Convert UK Biobank TSV data to Parquet format based on a"
+            "configuration file."
+        )
     )
     arg_parser.add_argument(
         dest="ukb_file",
         help="Path to the UK Biobank TSV file.",
-        type=argparse.FileType("r")
+        type=argparse.FileType("r"),
     )
     arg_parser.add_argument(
         dest="html_data_dict",
-        help=("Path to the HTML data dictionary file (can be created using the"
-              " `ukbconv` program with the option `docs`)."),
-        type=argparse.FileType("r")
+        help=(
+            "Path to the HTML data dictionary file (can be created using the"
+            " `ukbconv` program with the option `docs`)."
+        ),
+        type=argparse.FileType("r"),
     )
     arg_parser.add_argument(
         dest="config_file",
         help="Path to the YAML configuration file.",
-        type=argparse.FileType("r")
+        type=argparse.FileType("r"),
     )
 
     log_dir = Path.cwd() / "logs/python/create_parquet_from_config"
@@ -114,27 +118,33 @@ def parse_args():
         "--log-dir",
         dest="logdir",
         default=log_dir,
-        help=("Directory to store the logfile. The default value is the current"
-              " working directory /logs/python/create_parquet_from_config/")
+        help=(
+            "Directory to store the logfile. The default value is the current"
+            " working directory /logs/python/create_parquet_from_config/"
+        ),
     )
     arg_parser.add_argument(
         "--log-file-name",
         dest="logfile",
-        help=("Name for the log file. If not provided, the script will generate"
-              " a log file name based on the input file name and the current date"
-              " and time in the format 'create_parquet_from_config_{ukb_file}_"
-              "{config_file}_{date_time}.log', where {ukb_file} is the name of"
-              " the input UK biobank tsv file (without extension), {config_file}"
-              " is the name of the used config file and {date_time} is the current"
-              " date and time in the format 'YYYY-MM-DD_HH:MM:SS'.")
+        help=(
+            "Name for the log file. If not provided, the script will generate"
+            " a log file name based on the input file name and the current date"
+            " and time in the format 'create_parquet_from_config_{ukb_file}_"
+            "{config_file}_{date_time}.log', where {ukb_file} is the name of"
+            " the input UK biobank tsv file (without extension), {config_file}"
+            " is the name of the used config file and {date_time} is the current"
+            " date and time in the format 'YYYY-MM-DD_HH:MM:SS'."
+        ),
     )
     arg_parser.add_argument(
         "--log-level",
         choices=LOG_LEVELS,
         dest="loglevel",
         default="INFO",
-        help=("Set the level for the log file. Available options are: 'DEBUG',"
-              " 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. The default level is INFO.")
+        help=(
+            "Set the level for the log file. Available options are: 'DEBUG',"
+            " 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. The default level is INFO."
+        ),
     )
 
     return arg_parser.parse_args()
@@ -155,11 +165,12 @@ def set_logfile(args):
     """
     logfile_name = args.logfile
     if not logfile_name:
-        logfile_name = ("create_parquet_from_config_{ukb_file}_{config_file}_"
-                        "{date_time}.log").format(
+        logfile_name = (
+            "create_parquet_from_config_{ukb_file}_{config_file}_" "{date_time}.log"
+        ).format(
             ukb_file=os.path.splitext(os.path.basename(args.ukb_file.name))[0],
             config_file=os.path.splitext(os.path.basename(args.config_file.name))[0],
-            date_time=datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+            date_time=datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
         )
 
     rel_dir_name = os.path.relpath(args.logdir)
@@ -174,7 +185,7 @@ def set_logfile(args):
             filename=rel_log_file_path,
             level=args.loglevel,
             format=LOG_FORMAT,
-            filemode=LOG_FILLEMODE
+            filemode=LOG_FILLEMODE,
         )
         logging.info(
             f"Done setting up logging: log filepath = {logfile_name}, and log"
@@ -201,17 +212,20 @@ def read_config(config_file):
             d_keys = list(d.keys())
 
             if len(d_keys) != 1:
-                raise ValueError(("Each configuration in the configuration file"
-                                  " must contain a single top-level key, but found"
-                                  f" {len(d_keys)} keys: {d_keys}").format(
-                    count=len(d_keys),
-                    keys=", ".join(d_keys)
-                ))
+                raise ValueError(
+                    (
+                        "Each configuration in the configuration file"
+                        " must contain a single top-level key, but found"
+                        f" {len(d_keys)} keys: {d_keys}"
+                    ).format(count=len(d_keys), keys=", ".join(d_keys))
+                )
             elif d_keys[0] in config_dict:
-                raise ValueError("Duplicate configuration name found:"
-                                 f" '{d_keys[0]}'. Please make sure each"
-                                 " configuration in the YAML file has a unique"
-                                 " name.")
+                raise ValueError(
+                    "Duplicate configuration name found:"
+                    f" '{d_keys[0]}'. Please make sure each"
+                    " configuration in the YAML file has a unique"
+                    " name."
+                )
 
             if d_keys[0].upper() == "TEMPLATE":
                 continue
@@ -219,13 +233,17 @@ def read_config(config_file):
             config_dict.update(d)
 
     if len(config_dict.keys()) == 0:
-        raise ValueError("No configurations found in the given config file"
-                         f" ({config_file}), please note the configuration"
-                         " called template (case-insensitive) will be ignored.")
+        raise ValueError(
+            "No configurations found in the given config file"
+            f" ({config_file}), please note the configuration"
+            " called template (case-insensitive) will be ignored."
+        )
     else:
-        logging.info(f"Finished processing the configuration file {config_file},"
-                     f" found {len(config_dict.keys())} configurations, with the"
-                     f" following names: {list(config_dict.keys())}")
+        logging.info(
+            f"Finished processing the configuration file {config_file},"
+            f" found {len(config_dict.keys())} configurations, with the"
+            f" following names: {list(config_dict.keys())}"
+        )
 
     return config_dict
 
@@ -316,16 +334,20 @@ def check_if_output_dir_is_ok(path, force):
     if dir_exists(path):
 
         if not (is_dir_empty(path) or force):
-            log_message = ("Directory not empty, but force flag not set to"
-                           f" force overwriting content of directory: {path}")
+            log_message = (
+                "Directory not empty, but force flag not set to"
+                f" force overwriting content of directory: {path}"
+            )
             logging.warning(log_message)
             dir_is_ok = False
 
     else:
         existing_parent = find_first_existing_parent(path)
         if not dir_has_write_access(existing_parent):
-            logging.warning("Given directory can not be created due to no write"
-                            f" access in parent directory '{existing_parent}'.")
+            logging.warning(
+                "Given directory can not be created due to no write"
+                f" access in parent directory '{existing_parent}'."
+            )
             dir_is_ok = False
 
     return dir_is_ok
@@ -361,8 +383,10 @@ def check_required_fields_present(config, required_fields, config_name):
     any_missing_field = False
     for required_field in required_fields:
         if required_field not in config:
-            logging.warning(f"Required configuration key '{required_field}'"
-                            " not found in {config_name} configuration")
+            logging.warning(
+                f"Required configuration key '{required_field}'"
+                " not found in {config_name} configuration"
+            )
             any_missing_field = True
 
     return not any_missing_field
@@ -380,8 +404,9 @@ def get_valid_configs_dict(config_dict):
 
     logging.info("Starting to loop through configurations")
     for i, (config_name, config) in enumerate(config_dict.items()):
-        logging.info(f"Start processing configuration with index {i}, called"
-                     f" {config_name}")
+        logging.info(
+            f"Start processing configuration with index {i}, called" f" {config_name}"
+        )
 
         if not check_required_fields_present(config, REQUIRED_FIELDS, config_name):
             failed_configs.add(config_name)
@@ -392,14 +417,17 @@ def get_valid_configs_dict(config_dict):
 
     if len(failed_configs) == len(config_dict):
         # All configs failed
-        error_msg = ("All configurations are invalid. Please check the provided"
-                     " settings.")
+        error_msg = (
+            "All configurations are invalid. Please check the provided" " settings."
+        )
         logging.critical(error_msg)
         raise ValueError(error_msg)
     elif len(failed_configs):
         # Some configs failed, but not all
-        warning_msg = ("Processing completed with warnings. Configurations"
-                       f" {failed_configs} are invalid and will be ignored.")
+        warning_msg = (
+            "Processing completed with warnings. Configurations"
+            f" {failed_configs} are invalid and will be ignored."
+        )
         logging.warning(warning_msg)
     else:
         # All configs processed successfully
@@ -447,13 +475,17 @@ def get_data_dict(html_file):
     """
     try:
         data_dict = UKB_DataDict(html_file)
-        logging.info("Initiated UKB_DataDict instance with UK Biobank data"
-                     f" dictionary html file from path {html_file}, object"
-                     " ready to parse HTML.")
+        logging.info(
+            "Initiated UKB_DataDict instance with UK Biobank data"
+            f" dictionary html file from path {html_file}, object"
+            " ready to parse HTML."
+        )
     except Exception as e:
-        raise ValueError("Initiating UKB_DataDict instance with UK Biobank"
-                         f" data dictionary html file from path {html_file}"
-                         " failed") from e
+        raise ValueError(
+            "Initiating UKB_DataDict instance with UK Biobank"
+            f" data dictionary html file from path {html_file}"
+            " failed"
+        ) from e
     return data_dict
 
 
@@ -462,8 +494,10 @@ def convert_config_to_parquet(file_in, data_dict, config, col_names):
         config["dtype_dict"], data_dict, config["categorical_type"]
     )
     if missing_types["Type"] or missing_types["Encoding_type"]:
-        raise ValueError("Some types found in data_dict are not present in"
-                         f"dtype_dict, types not found are: {missing_types}")
+        raise ValueError(
+            "Some types found in data_dict are not present in"
+            f"dtype_dict, types not found are: {missing_types}"
+        )
 
     tsv2parquet.convert_to_parquet(
         tsv_file_in=file_in,
@@ -477,7 +511,7 @@ def convert_config_to_parquet(file_in, data_dict, config, col_names):
         offset=config["tab_offset"],
         force=config["force"],
         max_categories=config["max_categories"],
-        encoding=config["encoding"]
+        encoding=config["encoding"],
     )
 
 
@@ -487,14 +521,19 @@ def main(tsv_filename, html_filename, config_filename):
     data_dict = get_data_dict(html_filename)
 
     try:
-        logging.info("Trying to retrieve main table from the data dictionary"
-                     f" ({html_filename})")
+        logging.info(
+            "Trying to retrieve main table from the data dictionary"
+            f" ({html_filename})"
+        )
         data_dict.main_table
-        logging.info("Done retrieving main table from the data dictionary"
-                     f" ({html_filename})")
+        logging.info(
+            "Done retrieving main table from the data dictionary" f" ({html_filename})"
+        )
     except Exception as e:
-        raise ValueError("Could not retrieve main table from data dictionary"
-                         f" file ({html_filename})") from e
+        raise ValueError(
+            "Could not retrieve main table from data dictionary"
+            f" file ({html_filename})"
+        ) from e
 
     col_names = tsv2parquet.get_column_names(tsv_filename, data_dict)
 
@@ -503,7 +542,7 @@ def main(tsv_filename, html_filename, config_filename):
             file_in=tsv_filename,
             data_dict=data_dict,
             config=config_dict[key],
-            col_names=col_names
+            col_names=col_names,
         )
 
 
@@ -518,27 +557,29 @@ def main_cli():
     # Set log file
     set_logfile(args)
 
-    logging.info("Parsed following args: {args}".format(
-        args=", ".join([f"\n\t{arg}: {getattr(args, arg)}" for arg in vars(args)])
-    ))
+    logging.info(
+        "Parsed following args: {args}".format(
+            args=", ".join([f"\n\t{arg}: {getattr(args, arg)}" for arg in vars(args)])
+        )
+    )
 
     try:
         main(
             tsv_filename=args.ukb_file.name,
             html_filename=args.html_data_dict.name,
-            config_filename=args.config_file.name
+            config_filename=args.config_file.name,
         )
     except Exception:
-        log_file_name = logging.getLoggerClass() \
-            .root.handlers[0] \
-            .baseFilename
+        log_file_name = logging.getLoggerClass().root.handlers[0].baseFilename
         config_file_name = args.config_file.name
         utils.exit_script(
             f"An exception occured during the execution of the {__file__} script.",
             log_function=logging.exception,
             status=1,
-            exit_message=("An exception while converting UKB files from"
-                          f"config {config_file_name}, see {log_file_name}")
+            exit_message=(
+                "An exception while converting UKB files from"
+                f"config {config_file_name}, see {log_file_name}"
+            ),
         )
 
     logging.info("Script done running, exiting...")

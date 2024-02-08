@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 from io import StringIO
 
 
-class UKB_DataDict():
+class UKB_DataDict:
     """
     A class for working with UK Biobank Data Dictionary HTML files generated
     by the 'ukbconv' utility.
@@ -21,12 +21,20 @@ class UKB_DataDict():
             in cache. (If too many exceeding encoding_table_limit, what to do?)
         - Some way to save state of UKB_DataDict object?
     """
-    ENCODING_DOWNLOAD_URL_TEMPLATE = "https://biobank.ndph.ox.ac.uk/showcase/codown.cgi?id={}"  # noqa: E501
-    DEFAULT_ENCODING_FILE_TEMPLATE = "~/ukb-analyses/data/ukb/encoding_dicts/encoding_table_{}.txt"  # noqa: E501
+
+    ENCODING_DOWNLOAD_URL_TEMPLATE = (
+        "https://biobank.ndph.ox.ac.uk/showcase/codown.cgi?id={}"  # noqa: E501
+    )
+    DEFAULT_ENCODING_FILE_TEMPLATE = (
+        "~/ukb-analyses/data/ukb/encoding_dicts/encoding_table_{}.txt"  # noqa: E501
+    )
 
     def __init__(
-            self, path, encoding_file_template=DEFAULT_ENCODING_FILE_TEMPLATE,
-            encoding_table_limit=100):
+        self,
+        path,
+        encoding_file_template=DEFAULT_ENCODING_FILE_TEMPLATE,
+        encoding_table_limit=100,
+    ):
         """
         Initialize the UKB_DataDict object.
 
@@ -77,9 +85,11 @@ class UKB_DataDict():
                 self._data_encoding_tables = dict()
                 self._saved_encodings = []
             else:
-                raise ValueError("Path must be an valid HTML file with read"
-                                 F" access. {path} could not be read or was"
-                                 " not an HTML file.")
+                raise ValueError(
+                    "Path must be an valid HTML file with read"
+                    f" access. {path} could not be read or was"
+                    " not an HTML file."
+                )
 
     @property
     def html_file_content(self):
@@ -88,7 +98,7 @@ class UKB_DataDict():
         """
         if self._html_file_content is None:
             with open(self.path_to_html) as fp:
-                self._html_file_content = BeautifulSoup(fp, 'html.parser')
+                self._html_file_content = BeautifulSoup(fp, "html.parser")
         return self._html_file_content
 
     @property
@@ -110,11 +120,11 @@ class UKB_DataDict():
         """
         if self._info is None:
             # Get info table from file and convert to pandas
-            info_table_html = self.html_file_content.find('table')
+            info_table_html = self.html_file_content.find("table")
             info_table_pd = pd.read_html(StringIO(str(info_table_html)))[0]
             self._info = {
                 info_table_pd[0][0]: info_table_pd[1][0],
-                info_table_pd[0][1]: info_table_pd[1][1]
+                info_table_pd[0][1]: info_table_pd[1][1],
             }
         return self._info
 
@@ -170,7 +180,7 @@ class UKB_DataDict():
         Returns:
             pd.DataFrame: The extracted main data dictionary table.
         """
-        html_content = self.html_file_content.findAll('table', limit=2)[1]
+        html_content = self.html_file_content.findAll("table", limit=2)[1]
         return pd.read_html(StringIO(str(html_content)))[0]
 
     def _process_main_table(self, main_table):
@@ -183,16 +193,21 @@ class UKB_DataDict():
         """
         main_table["Column"] = main_table["Count"].astype("Int64")
         main_table["Count"] = main_table["Count"].astype("Int64")
-        main_table["Encoding_id"] = main_table["Description"] \
-            .str.extract(r"Uses data-coding (\d+)")
-        main_table["Encoding_num_members"] = main_table["Description"] \
-            .str.extract(r"Uses data-coding \d+ comprises (\d+)").astype("Int64")
-        main_table["Encoding_type"] = main_table["Description"] \
-            .str.extract(r"Uses data-coding \d+ comprises \d+ (\w+)-valued")
-        main_table["Is_hierarchical"] = main_table["Description"] \
-            .str.contains("hierarchical")
-        main_table["Is_categorical"] = main_table["Type"] \
-            .str.startswith("Categorical")
+        main_table["Encoding_id"] = main_table["Description"].str.extract(
+            r"Uses data-coding (\d+)"
+        )
+        main_table["Encoding_num_members"] = (
+            main_table["Description"]
+            .str.extract(r"Uses data-coding \d+ comprises (\d+)")
+            .astype("Int64")
+        )
+        main_table["Encoding_type"] = main_table["Description"].str.extract(
+            r"Uses data-coding \d+ comprises \d+ (\w+)-valued"
+        )
+        main_table["Is_hierarchical"] = main_table["Description"].str.contains(
+            "hierarchical"
+        )
+        main_table["Is_categorical"] = main_table["Type"].str.startswith("Categorical")
         main_table["Has_encoding"] = main_table["Encoding_id"].notna()
 
     def _download_encoding_table(self, encoding_id):
@@ -214,10 +229,14 @@ class UKB_DataDict():
         encoding_dest_filename = self.encoding_file_template.format(encoding_id)
 
         command_list = [
-            "curl", url, "-silent", "--create-dirs",
-            "-o", encoding_dest_filename
+            "curl",
+            url,
+            "-silent",
+            "--create-dirs",
+            "-o",
+            encoding_dest_filename,
         ]
-        sp.run(command_list, stdout=open(os.devnull, 'wb'))
+        sp.run(command_list, stdout=open(os.devnull, "wb"))
 
     def _get_encoding_table_from_file(self, encoding_id):
         """
@@ -240,17 +259,21 @@ class UKB_DataDict():
             print(f"Trying to download ({encoding_filename})")
             self._download_encoding_table(encoding_id)
         elif not os.access(encoding_filename, os.R_OK):
-            raise ValueError(f"File with encoding table {encoding_filename}"
-                             " does not have read access.")
+            raise ValueError(
+                f"File with encoding table {encoding_filename}"
+                " does not have read access."
+            )
 
         with open(encoding_filename, "r") as f:
             file_content = f.read()
 
         if "Sorry, internal error prevents download of coding" in file_content:
             os.remove(encoding_filename)
-            raise ValueError("UK Biobank website returned an internal server"
-                             " error while trying to download encoding table"
-                             f" for encoding id {encoding_id}")
+            raise ValueError(
+                "UK Biobank website returned an internal server"
+                " error while trying to download encoding table"
+                f" for encoding id {encoding_id}"
+            )
 
         encoding_table = pd.read_table(encoding_filename, skiprows=7)
         encoding_table = encoding_table.rename(columns={"coding": "Code"})
@@ -270,12 +293,14 @@ class UKB_DataDict():
             ValueError: If no encoding table wth given encoding_id is found in the HTML.
         """
         encoding_table_html = self.html_file_content.find(
-            'table', summary=f"Coding {encoding_id}"
+            "table", summary=f"Coding {encoding_id}"
         )
 
         if not encoding_table_html:
-            raise ValueError("No encoding table found for encoding with encoding"
-                             f" ID: {encoding_id}")
+            raise ValueError(
+                "No encoding table found for encoding with encoding"
+                f" ID: {encoding_id}"
+            )
 
         return pd.read_html(StringIO(str(encoding_table_html)))[0]
 
@@ -338,11 +363,10 @@ class UKB_DataDict():
             float: The total size of saved encoding files in Mebibytes.
         """
         total_size = sum(
-                os.path.getsize(self.encoding_filename.format(enc_id))
-                / (1024 * 1024)
-                for enc_id in self._saved_encodings
-                if os.path.exists(self.encoding_filename.format(enc_id))
-            )
+            os.path.getsize(self.encoding_filename.format(enc_id)) / (1024 * 1024)
+            for enc_id in self._saved_encodings
+            if os.path.exists(self.encoding_filename.format(enc_id))
+        )
         return total_size
 
     def _remove_oldest_if_needed_encoding_cache(self):
@@ -372,7 +396,9 @@ class UKB_DataDict():
         Args:
             encoding_id (int): The ID of the encoding table to cache.
         """
-        self._data_encoding_tables[encoding_id] = self._retrieve_encoding_table(encoding_id)  # noqa: E501
+        self._data_encoding_tables[encoding_id] = self._retrieve_encoding_table(
+            encoding_id
+        )  # noqa: E501
         self._saved_encodings.append(encoding_id)
         self._remove_oldest_if_needed_encoding_cache()
 
@@ -394,8 +420,9 @@ class UKB_DataDict():
             try:
                 self._add_encoding_table_to_cache(encoding_id)
             except Exception as e:
-                raise ValueError("No encoding table could be read for encoding"
-                                 f" id {encoding_id}.") from e
+                raise ValueError(
+                    "No encoding table could be read for encoding" f" id {encoding_id}."
+                ) from e
         else:
             self._update_saved_encoding_order(encoding_id)
         return self._data_encoding_tables[encoding_id]
@@ -422,8 +449,10 @@ class UKB_DataDict():
         """
         if is_udi:
             if field_id not in self.main_table["UDI"].unique():
-                raise ValueError(f"Given field_id ({field_id}) not found in the"
-                                 "UDI column of the main table.")
+                raise ValueError(
+                    f"Given field_id ({field_id}) not found in the"
+                    "UDI column of the main table."
+                )
 
             # Get encoding id belonging to field id
             enc_id = self.main_table.loc[
@@ -433,13 +462,12 @@ class UKB_DataDict():
         else:
             split_udi_id = self.main_table["UDI"].str.split("-", expand=True)[0]
             if field_id not in split_udi_id.unique():
-                raise ValueError(f"Given field_id ({field_id}) not found as part of a"
-                                 " UDI in the UDI column of the main table.")
+                raise ValueError(
+                    f"Given field_id ({field_id}) not found as part of a"
+                    " UDI in the UDI column of the main table."
+                )
 
-            enc_id_series = self.main_table.loc[
-                split_udi_id == field_id,
-                "Encoding_id"
-            ]
+            enc_id_series = self.main_table.loc[split_udi_id == field_id, "Encoding_id"]
             if enc_id_series.size == 1:
                 enc_id = enc_id_series.item()
             else:
@@ -466,9 +494,11 @@ class UKB_DataDict():
         """
         if is_udi:
             if field_id not in self.main_table["UDI"].unique():
-                raise ValueError(f"Field ID ({field_id}) not found in the UDI"
-                                 " column of the main table. Please check the"
-                                 " provided field ID.")
+                raise ValueError(
+                    f"Field ID ({field_id}) not found in the UDI"
+                    " column of the main table. Please check the"
+                    " provided field ID."
+                )
 
             # Get description belonging to field id
             description = self.main_table.loc[
@@ -478,21 +508,24 @@ class UKB_DataDict():
         else:
             split_udi_id = self.main_table["UDI"].str.split("-", expand=True)[0]
             if field_id not in split_udi_id.unique():
-                raise ValueError(f"Field ID ({field_id}) not found as part of"
-                                 " a UDI in the UDI column of the main table."
-                                 " Please check the provided field ID.")
+                raise ValueError(
+                    f"Field ID ({field_id}) not found as part of"
+                    " a UDI in the UDI column of the main table."
+                    " Please check the provided field ID."
+                )
 
             description_series = self.main_table.loc[
-                split_udi_id == field_id,
-                "Description"
+                split_udi_id == field_id, "Description"
             ]
             if description_series.size == 1:
                 description = description_series.item()
             else:
                 # Check if all the descriptions are indentical
                 if len(description_series.unique()) > 1:
-                    raise ValueError(f"Ambiguous field_id: {field_id}. Multiple"
-                                     " non-identical human-readable names found.")
+                    raise ValueError(
+                        f"Ambiguous field_id: {field_id}. Multiple"
+                        " non-identical human-readable names found."
+                    )
                 else:
                     description = description_series.iloc[0]
 

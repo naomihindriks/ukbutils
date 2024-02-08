@@ -96,7 +96,6 @@ import pandas as pd
 import dask
 import dask.dataframe as dd
 from dask.distributed import Client, LocalCluster, get_client
-import time
 
 
 # Custom scripts
@@ -125,8 +124,8 @@ DEFAULT_DTYPE_DICT = {
         "Integer": "float",
         "Real": "float",
         "ERROR": ["Date", "%Y-%m-%d"],
-        "String": "string"
-    }
+        "String": "string",
+    },
 }
 
 DEFAULT_MAX_CATEGORIES = 256
@@ -146,25 +145,22 @@ def parse_args():
         argparse.Namespace: The parsed command-line arguments.
     """
     arg_parser = argparse.ArgumentParser(
-        description=("Converts UK Biobank TSV files to Parquet format using"
-                     " Dask dataframes.")
+        description=(
+            "Converts UK Biobank TSV files to Parquet format using" " Dask dataframes."
+        )
     )
     arg_parser.add_argument(
-        dest="ukb_file",
-        help="path to UK Biobank tsv file",
-        type=argparse.FileType("r")
+        dest="ukb_file", help="path to UK Biobank tsv file", type=argparse.FileType("r")
     )
 
     arg_parser.add_argument(
-        dest="out_dir",
-        help="Directory path to store the parquet file(s)",
-        type=Path
+        dest="out_dir", help="Directory path to store the parquet file(s)", type=Path
     )
 
     arg_parser.add_argument(
         dest="data_dict",
         help="Html file containing the UK Biobank data dictionary",
-        type=argparse.FileType("r")
+        type=argparse.FileType("r"),
     )
 
     arg_parser.add_argument(
@@ -172,35 +168,40 @@ def parse_args():
         "--encoding",
         help="file encoding needed to read in 'ukb_file'",
         type=str,
-        default=DEFAULT_ENCODING
+        default=DEFAULT_ENCODING,
     )
 
     arg_parser.add_argument(
         "-n",
         "--nrows",
-        help=("Number of rows of the original data to keep to write to"
-              " parquet file"),
+        help=(
+            "Number of rows of the original data to keep to write to" " parquet file"
+        ),
         required=False,
-        type=int
+        type=int,
     )
 
     arg_parser.add_argument(
         "-r",
         "--repartition",
-        help=("Number of partitions to repartition to when reshaping the dask"
-              " dataframe (repartitioning will happen after potential row"
-              " splicing depending on value in nrows)"),
+        help=(
+            "Number of partitions to repartition to when reshaping the dask"
+            " dataframe (repartitioning will happen after potential row"
+            " splicing depending on value in nrows)"
+        ),
         required=False,
-        type=int
+        type=int,
     )
 
     arg_parser.add_argument(
         "-m",
         "--max_categories",
-        help=("Maximum levels that can be present in a categorical column"
-              " where the dtype will be set to categorical."),
+        help=(
+            "Maximum levels that can be present in a categorical column"
+            " where the dtype will be set to categorical."
+        ),
         type=int,
-        default=DEFAULT_MAX_CATEGORIES
+        default=DEFAULT_MAX_CATEGORIES,
     )
     arg_parser.add_argument(
         "-c",
@@ -208,36 +209,42 @@ def parse_args():
         nargs="+",
         dest="categorical_cols",
         help="Columns to treat as categoricals.",
-        default=DEFAULT_CATEGORICAL_COLUMNS
+        default=DEFAULT_CATEGORICAL_COLUMNS,
     )
 
     arg_parser.add_argument(
         "-dt",
         "--dtype_dict_type",
-        nargs='*',
-        help=("The values specified here will be added (or overwrite) the"
-              " value found in the default dtype dict, shoud be specified in"
-              " the format 'key=value', multiple values can be specified"
-              " seperated by a whitespace")
+        nargs="*",
+        help=(
+            "The values specified here will be added (or overwrite) the"
+            " value found in the default dtype dict, shoud be specified in"
+            " the format 'key=value', multiple values can be specified"
+            " seperated by a whitespace"
+        ),
     )
 
     arg_parser.add_argument(
         "-de",
         "--dtype_dict_encoding_type",
-        nargs='*',
-        help=("The values specified here will be added (or overwrite) the"
-              " value found in the default dtype dict, shoud be specified in"
-              " the format 'key=value', multiple values can be specified"
-              " seperated by a whitespace")
+        nargs="*",
+        help=(
+            "The values specified here will be added (or overwrite) the"
+            " value found in the default dtype dict, shoud be specified in"
+            " the format 'key=value', multiple values can be specified"
+            " seperated by a whitespace"
+        ),
     )
 
     arg_parser.add_argument(
         "-s",
         "--settings",
-        nargs='*',
-        help=("Settings will be passed to the dasks to_parquet method, expected"
-              " in the format 'named_arg=value', multiple values can be specified"
-              " seperated by a whitespace")
+        nargs="*",
+        help=(
+            "Settings will be passed to the dasks to_parquet method, expected"
+            " in the format 'named_arg=value', multiple values can be specified"
+            " seperated by a whitespace"
+        ),
     )
 
     arg_parser.add_argument(
@@ -245,24 +252,21 @@ def parse_args():
         "--tab_offset",
         dest="offset",
         type=int,
-        help=("Number of extra tabs excpected at the start or end of each"
-              " data row in the TSV file. Extra tabs will be added to the"
-              " header before reading in the UK Biobank file to make sure"
-              " the header and data columns are alligned correctly. The file"
-              " will remain unchanged. Use a positive number to indicate the"
-              " tabs at the end of a data row or a negative numbers to indicate"
-              " tabs at the end of data rows."),
+        help=(
+            "Number of extra tabs excpected at the start or end of each"
+            " data row in the TSV file. Extra tabs will be added to the"
+            " header before reading in the UK Biobank file to make sure"
+            " the header and data columns are alligned correctly. The file"
+            " will remain unchanged. Use a positive number to indicate the"
+            " tabs at the end of a data row or a negative numbers to indicate"
+            " tabs at the end of data rows."
+        ),
         default=0,
-        required=False
+        required=False,
     )
     # TODO ADD HELP MESSAGE
     arg_parser.add_argument(
-        "-f",
-        "--force",
-        dest="force",
-        help="",
-        required=False,
-        action='store_true'
+        "-f", "--force", dest="force", help="", required=False, action="store_true"
     ),
 
     log_dir = Path.cwd() / "logs/python/ukb_tsv_to_parquet"
@@ -271,29 +275,35 @@ def parse_args():
         "--log-dir",
         dest="logdir",
         default=log_dir,
-        help=("Directory to store the logfile. The default value is the"
-              " current working directory /logs/python/ukb_tsv_to_parquet/")
+        help=(
+            "Directory to store the logfile. The default value is the"
+            " current working directory /logs/python/ukb_tsv_to_parquet/"
+        ),
     )
     arg_parser.add_argument(
         "--log-file-name",
         dest="logfile",
-        help=("Name for the log file. If not provided, the script will"
-              " generate a log file name based on the input file name and the"
-              " current date and time in the format"
-              " 'ukb_tsv_to_parquet_{ukb_file}_{out_dir}_{date_time}.log',"
-              " where {ukb_file} is the name of the input UK biobank tsv file"
-              " (without extension), {out_dir} is the name of the directory"
-              " path where output is stored and {date_time} is the current"
-              " date and time in the format 'YYYY-MM-DD_HH:MM:SS'.")
+        help=(
+            "Name for the log file. If not provided, the script will"
+            " generate a log file name based on the input file name and the"
+            " current date and time in the format"
+            " 'ukb_tsv_to_parquet_{ukb_file}_{out_dir}_{date_time}.log',"
+            " where {ukb_file} is the name of the input UK biobank tsv file"
+            " (without extension), {out_dir} is the name of the directory"
+            " path where output is stored and {date_time} is the current"
+            " date and time in the format 'YYYY-MM-DD_HH:MM:SS'."
+        ),
     )
     arg_parser.add_argument(
         "--log-level",
         choices=LOG_LEVELS,
         dest="loglevel",
         default="INFO",
-        help=("Set the level for the log file. Available options are:"
-              " 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. The default"
-              " level is INFO.")
+        help=(
+            "Set the level for the log file. Available options are:"
+            " 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'. The default"
+            " level is INFO."
+        ),
     )
 
     return arg_parser.parse_args()
@@ -309,12 +319,11 @@ def set_logfile(args):
     logfile_name = args.logfile
 
     if not logfile_name:
-        logfile_name = "ukb_tsv_to_parquet_{ukb_file}_{out_dir}_{date_time}.log"\
-            .format(
-                ukb_file=os.path.splitext(os.path.basename(args.ukb_file.name))[0],
-                out_dir=os.path.splitext(os.path.basename(args.out_dir))[0],
-                date_time=datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-            )
+        logfile_name = "ukb_tsv_to_parquet_{ukb_file}_{out_dir}_{date_time}.log".format(
+            ukb_file=os.path.splitext(os.path.basename(args.ukb_file.name))[0],
+            out_dir=os.path.splitext(os.path.basename(args.out_dir))[0],
+            date_time=datetime.datetime.now().strftime("%Y-%m-%d_%H:%M:%S"),
+        )
 
     rel_dir_name = os.path.relpath(args.logdir)
     if not os.path.exists(rel_dir_name):
@@ -328,7 +337,7 @@ def set_logfile(args):
             filename=rel_log_file_path,
             level=args.loglevel,
             format=LOG_FORMAT,
-            filemode=LOG_FILLEMODE
+            filemode=LOG_FILLEMODE,
         )
         logging.info(
             f"Done setting up logging: log filepath = {logfile_name}, and log"
@@ -362,12 +371,16 @@ def add_offset_tabs_to_col_names(col_names, offset):
         list: Updated column names with added column names.
     """
     if offset > 0:
-        logging.info(f"Positive offset: adding {offset} placeholders to the"
-                     "start of column names.")
+        logging.info(
+            f"Positive offset: adding {offset} placeholders to the"
+            "start of column names."
+        )
         col_names = [f"Empty column {x}" for x in range(offset)] + col_names
     elif offset < 0:
-        logging.info(f"Negative offset: adding {offset} placeholders to the"
-                     "end of column names.")
+        logging.info(
+            f"Negative offset: adding {offset} placeholders to the"
+            "end of column names."
+        )
         col_names = col_names + [f"Empty column {x}" for x in range(abs(offset))]
     else:
         logging.info("No offset: skipping offset step")
@@ -396,8 +409,8 @@ def find_date_types(dtype_conversion_dict):
 
 
 def determine_categorical_dtype(
-        main_table_entry, data_dict, conversion_table_encoding,
-        categorical_max_size=256):
+    main_table_entry, data_dict, conversion_table_encoding, categorical_max_size=256
+):
     """
     Determine the appropriate Pandas CategoricalDtype for a categorical
     column in the UK Biobank dataset.
@@ -425,14 +438,15 @@ def determine_categorical_dtype(
 
     if np.isnan(num_members) or main_table_entry["Encoding_type"].isna().item():
         raise ValueError(
-            "Trying to parse {} as categorical, but no \"Encoding_num_members\""
+            'Trying to parse {} as categorical, but no "Encoding_num_members"'
             " item found in given dataframe (encoding id: {}, encoding type: {},"
             " encoding num members: {})".format(
                 main_table_entry["UDI"].item(),
                 main_table_entry["Encoding_id"].item(),
                 main_table_entry["Encoding_type"].item(),
-                main_table_entry["Encoding_num_members"].item()
-            ))
+                main_table_entry["Encoding_num_members"].item(),
+            )
+        )
 
     if num_members <= categorical_max_size:
         encoding_id = main_table_entry["Encoding_id"].item()
@@ -446,8 +460,7 @@ def determine_categorical_dtype(
         categories = my_encoding_table["Code"].tolist()
         encoding_type = main_table_entry["Encoding_type"].item()
         categories = pd.Index(
-            categories,
-            dtype=conversion_table_encoding[encoding_type]
+            categories, dtype=conversion_table_encoding[encoding_type]
         )
 
         try:
@@ -458,7 +471,8 @@ def determine_categorical_dtype(
                 " (UDI: {}, encoding id: {}, encoding type: {})".format(
                     main_table_entry["UDI"].item(),
                     main_table_entry["Encoding_id"].item(),
-                    main_table_entry["Encoding_type"].item())
+                    main_table_entry["Encoding_type"].item(),
+                )
             ) from e
 
     else:
@@ -468,9 +482,14 @@ def determine_categorical_dtype(
 
 
 def determine_column_dtype(
-        column_name, data_dict, conversion_table, cat_cols=[],
-        conversion_table_encoding=None, categorical_max_size=256,
-        type_column="Type"):
+    column_name,
+    data_dict,
+    conversion_table,
+    cat_cols=[],
+    conversion_table_encoding=None,
+    categorical_max_size=256,
+    type_column="Type",
+):
     """
     Determine the appropriate Pandas dtype for a column in the UK Biobank
     dataset, considering optional categorical columns.
@@ -503,26 +522,26 @@ def determine_column_dtype(
         # TODO raise valueerror if cat_cols but no conversion_table_encoding given
         pass
 
-    main_table_entry = data_dict.main_table[
-        data_dict.main_table["UDI"] == column_name
-    ]
+    main_table_entry = data_dict.main_table[data_dict.main_table["UDI"] == column_name]
 
     # TODO: add test to check if there is a single row for the given column
     # name in the main table, throw error if not found or multiple rows
     ukb_type = main_table_entry[type_column].item()
 
     if ukb_type in cat_cols:
-        my_d_type = determine_categorical_dtype(main_table_entry, data_dict,
-                                                conversion_table_encoding,
-                                                categorical_max_size)
+        my_d_type = determine_categorical_dtype(
+            main_table_entry, data_dict, conversion_table_encoding, categorical_max_size
+        )
 
     else:
         try:
             my_d_type = conversion_table[ukb_type]
         except KeyError:
-            raise ValueError(f"The type {ukb_type} could not be translated"
-                             " to a dtype, because it was not present in given"
-                             f" conversion_table ({conversion_table})")
+            raise ValueError(
+                f"The type {ukb_type} could not be translated"
+                " to a dtype, because it was not present in given"
+                f" conversion_table ({conversion_table})"
+            )
 
     return my_d_type
 
@@ -551,45 +570,46 @@ def get_date_format_dict(use_columns, data_dict, dtype_dict, max_categories):
 
     for col_name in use_columns:
         col_type = data_dict.main_table.loc[
-            data_dict.main_table["UDI"] == col_name,
-            "Type"
+            data_dict.main_table["UDI"] == col_name, "Type"
         ].item()
         if col_type in date_type_keys:
             date_format_dict[col_name] = dtype_dict["Type"][col_type][1]
             date_columns_found += 1
-            logging.debug(f"Column '{col_name}' identified as date type with"
-                          f" format: {dtype_dict['Type'][col_type][1]}")
+            logging.debug(
+                f"Column '{col_name}' identified as date type with"
+                f" format: {dtype_dict['Type'][col_type][1]}"
+            )
 
     encoding_col_columns = data_dict.main_table.loc[
         data_dict.main_table["Encoding_type"].isin(date_type_encoding_keys)
         & data_dict.main_table["UDI"].isin(use_columns),
-        "UDI"
+        "UDI",
     ]
 
     for col_name in encoding_col_columns:
         n_categories = data_dict.main_table.loc[
-            data_dict.main_table["UDI"] == col_name,
-            "Encoding_num_members"
+            data_dict.main_table["UDI"] == col_name, "Encoding_num_members"
         ].item()
 
         if n_categories > max_categories:
             col_encoding_type = data_dict.main_table.loc[
-                data_dict.main_table["UDI"] == col_name,
-                "Encoding_type"
+                data_dict.main_table["UDI"] == col_name, "Encoding_type"
             ].item()
             if col_encoding_type in date_type_encoding_keys:
-                date_format_dict[col_name] = (dtype_dict["Encoding_type"]
-                                              [col_encoding_type]
-                                              [1])
+                date_format_dict[col_name] = dtype_dict["Encoding_type"][
+                    col_encoding_type
+                ][1]
                 encoding_date_columns_found += 1
-                encoding_format = (dtype_dict['Encoding_type']
-                                   [col_encoding_type]
-                                   [1])
-                logging.debug(f"Column '{col_name}' identified as date type"
-                              f" with format: {encoding_format}")
+                encoding_format = dtype_dict["Encoding_type"][col_encoding_type][1]
+                logging.debug(
+                    f"Column '{col_name}' identified as date type"
+                    f" with format: {encoding_format}"
+                )
 
-    logging.info(f"Identified {date_columns_found} date columns and"
-                 f" {encoding_date_columns_found} encoding date columns.")
+    logging.info(
+        f"Identified {date_columns_found} date columns and"
+        f" {encoding_date_columns_found} encoding date columns."
+    )
 
     return date_format_dict
 
@@ -618,8 +638,10 @@ def get_types_dict(use_columns, data_dict, dtype_dict, cat_cols, max_num_categor
                 as dates.
     """
     # TODO: add more logging?
-    logging.info("Determining dtypes for columns to use in the dask dataframe"
-                 "read_table function")
+    logging.info(
+        "Determining dtypes for columns to use in the dask dataframe"
+        "read_table function"
+    )
 
     date_type_keys = find_date_types(dtype_dict["Type"])
     date_type_encoding_keys = find_date_types(dtype_dict["Encoding_type"])
@@ -627,15 +649,21 @@ def get_types_dict(use_columns, data_dict, dtype_dict, cat_cols, max_num_categor
     # Call the determine_column_dtype function for every column that is
     # not considered a "Date" type
     types_dict = {
-        col_name: determine_column_dtype(col_name, data_dict,
-                                         dtype_dict["Type"], cat_cols,
-                                         dtype_dict["Encoding_type"],
-                                         max_num_categories)
+        col_name: determine_column_dtype(
+            col_name,
+            data_dict,
+            dtype_dict["Type"],
+            cat_cols,
+            dtype_dict["Encoding_type"],
+            max_num_categories,
+        )
         for col_name in use_columns
-        if not (data_dict.main_table.loc[
-                    data_dict.main_table["UDI"] == col_name,
-                    "Type"
-                ].item() in date_type_keys)
+        if not (
+            data_dict.main_table.loc[
+                data_dict.main_table["UDI"] == col_name, "Type"
+            ].item()
+            in date_type_keys
+        )
     }
     logging.info(f"Initial types dict has length {len(types_dict)}")
 
@@ -645,16 +673,19 @@ def get_types_dict(use_columns, data_dict, dtype_dict, cat_cols, max_num_categor
         if (
             types_dict[col_name] == EXCEEDING_MAX_CAT_KEYWORD
             and data_dict.main_table.loc[
-                data_dict.main_table["UDI"] == col_name,
-                "Encoding_type"
-            ].item() in date_type_encoding_keys
+                data_dict.main_table["UDI"] == col_name, "Encoding_type"
+            ].item()
+            in date_type_encoding_keys
         )
     ]
 
     unprocessed_non_date_cols = {
-        col_name: determine_column_dtype(col_name, data_dict,
-                                         dtype_dict["Encoding_type"],
-                                         type_column="Encoding_type")
+        col_name: determine_column_dtype(
+            col_name,
+            data_dict,
+            dtype_dict["Encoding_type"],
+            type_column="Encoding_type",
+        )
         for col_name in types_dict
         if (
             types_dict[col_name] == EXCEEDING_MAX_CAT_KEYWORD
@@ -671,8 +702,15 @@ def get_types_dict(use_columns, data_dict, dtype_dict, cat_cols, max_num_categor
 
 
 def get_dask_dataframe(
-        tsv_file, col_names, offset, data_dict, dtype_dict, cat_cols,
-        max_categories, encoding):
+    tsv_file,
+    col_names,
+    offset,
+    data_dict,
+    dtype_dict,
+    cat_cols,
+    max_categories,
+    encoding,
+):
     """
     Load data into dask dataframe based on given parameters.
 
@@ -702,40 +740,45 @@ def get_dask_dataframe(
     logging.info("Starting process to load data into dask dataframe.")
     col_names_with_offset = add_offset_tabs_to_col_names(col_names, offset)
 
-    types = get_types_dict(col_names, data_dict, dtype_dict,
-                           cat_cols, max_categories)
+    types = get_types_dict(col_names, data_dict, dtype_dict, cat_cols, max_categories)
     logging.info("Succesfuly create dtypes dict")
 
-    date_format_dict = get_date_format_dict(col_names, data_dict,
-                                            dtype_dict, max_categories)
+    date_format_dict = get_date_format_dict(
+        col_names, data_dict, dtype_dict, max_categories
+    )
 
     date_col_type_dict = {date_col: "string" for date_col in date_format_dict.keys()}
     types.update(date_col_type_dict)
 
-    logging.info(f"Calling the dask read_table function for {tsv_file},"
-                 f" encoding set to {encoding}")
+    logging.info(
+        f"Calling the dask read_table function for {tsv_file},"
+        f" encoding set to {encoding}"
+    )
     ddf = dd.read_table(
         urlpath=tsv_file,
         encoding=encoding,
         header=0,
         usecols=col_names,
         names=col_names_with_offset,
-        dtype=types
+        dtype=types,
         # parse_dates=list(date_format_dict.keys()),
         # date_format=date_format_dict
     )
 
     for date_col in date_col_type_dict:
-        logging.debug(f"Parsing column {date_col} to datetime format"
-                      f"{date_format_dict[date_col]}")
-        ddf[date_col] = dd.to_datetime(ddf[date_col],
-                                       format=date_format_dict[date_col])
+        logging.debug(
+            f"Parsing column {date_col} to datetime format"
+            f"{date_format_dict[date_col]}"
+        )
+        ddf[date_col] = dd.to_datetime(ddf[date_col], format=date_format_dict[date_col])
 
     # Capture and log info on loaded dataframe
     with utils.capture() as result_string:
         ddf.info()
-    logging.info("Sucesfully loaded data as dask dataframe. Dataframe"
-                 f" info:\n{result_string['stdout']}")
+    logging.info(
+        "Sucesfully loaded data as dask dataframe. Dataframe"
+        f" info:\n{result_string['stdout']}"
+    )
 
     return ddf
 
@@ -759,7 +802,7 @@ def reshape_ddf(ddf, nrows, npartitions):
     if nrows:
         logging.info(f"Slicing dataframe, keeping first {nrows} rows")
         try:
-            ddf = ddf.loc[0:nrows-1]
+            ddf = ddf.loc[0 : nrows - 1]
 
             logging.info("Dataframe sliced")
         except Exception as e:
@@ -767,13 +810,13 @@ def reshape_ddf(ddf, nrows, npartitions):
 
     if npartitions:
         try:
-            logging.info(f"Try repartitioning dataframe to {npartitions}"
-                         " partitions")
+            logging.info(f"Try repartitioning dataframe to {npartitions}" " partitions")
             ddf = ddf.repartition(npartitions=npartitions)
-            logging.info(f'Repartitioned dataframe to {npartitions} partitions')
+            logging.info(f"Repartitioned dataframe to {npartitions} partitions")
         except Exception as e:
-            raise TypeError("Could not repartition dataframe to"
-                            f" {ddf.npartitions} repartions.") from e
+            raise TypeError(
+                "Could not repartition dataframe to" f" {ddf.npartitions} repartions."
+            ) from e
     return ddf
 
 
@@ -809,8 +852,10 @@ def create_readme(dir_path, config, description=None):
             read_me_f.write(f" Created on {now}\n\n")
             if description:
                 read_me_f.write(f"Description:\n{description}\n\n")
-            read_me_f.write("The following configuartion was used to create"
-                            " this directory of parquet files:\n")
+            read_me_f.write(
+                "The following configuartion was used to create"
+                " this directory of parquet files:\n"
+            )
             read_me_f.write(yaml.dump(config))
 
         logging.info(f"README file written successfully at: {readme_path}")
@@ -866,10 +911,7 @@ def write_to_parquet(ddf, out_path, settings, force):
         "Trying to write dataframe to parquet format with following"
         f" settings:\n{settings}"
     )
-    ddf.to_parquet(
-        out_path,
-        **settings
-    )
+    ddf.to_parquet(out_path, **settings)
 
     logging.info(
         "Done writing dataframe to parquet format with following"
@@ -898,20 +940,20 @@ def get_column_names(tsv_file, data_dict):
 
     for i, column_name in enumerate(column_names):
         data_dict_for_column = data_dict.main_table[
-                    data_dict.main_table["UDI"] == column_name
-                ]
+            data_dict.main_table["UDI"] == column_name
+        ]
         len_data_dict_for_column = len(data_dict_for_column.index)
 
         if len_data_dict_for_column < 1:
             raise ValueError(
-                f"Column {i}, with column name: \"{repr(column_name)}\" can not"
+                f'Column {i}, with column name: "{repr(column_name)}" can not'
                 " be found in the given data dictionary ({data_dict.path_to_html})."
                 " Please make sure the data dictionary matches the given"
                 " UK Biobank file."
             )
         elif len_data_dict_for_column > 1:
             raise ValueError(
-                f"Column {i}, with column name: \"{repr(column_name)}\" shows"
+                f'Column {i}, with column name: "{repr(column_name)}" shows'
                 f" up {len_data_dict_for_column} times in column names, please"
                 " make sure to give a valid data dictionary file with a single"
                 " row for every column found in the UK Biobank file."
@@ -923,10 +965,20 @@ def get_column_names(tsv_file, data_dict):
 
 
 def convert_to_parquet(
-        tsv_file_in, out_dir, data_dict, column_names, nrows=0, npartitions=0,
-        dtype_dict=DEFAULT_DTYPE_DICT, settings={}, offset=0, force=False,
-        cat_cols=DEFAULT_CATEGORICAL_COLUMNS, max_categories=DEFAULT_MAX_CATEGORIES,
-        encoding=DEFAULT_ENCODING):
+    tsv_file_in,
+    out_dir,
+    data_dict,
+    column_names,
+    nrows=0,
+    npartitions=0,
+    dtype_dict=DEFAULT_DTYPE_DICT,
+    settings={},
+    offset=0,
+    force=False,
+    cat_cols=DEFAULT_CATEGORICAL_COLUMNS,
+    max_categories=DEFAULT_MAX_CATEGORIES,
+    encoding=DEFAULT_ENCODING,
+):
     """
     Convert the UK Biobank data from a TSV file to Parquet format with
     user-defined conget_missing_types_in_dtype_dictfigurations.
@@ -974,26 +1026,25 @@ def convert_to_parquet(
         client = get_client()
         logging.info(f"Found client: {client}")
     except ValueError:
-        filtered_config_defaults = list(filter(lambda x: "distributed" in x.keys(), dask.config.defaults))
+        filtered_config_defaults = list(
+            filter(lambda x: "distributed" in x.keys(), dask.config.defaults)
+        )
         if len(filtered_config_defaults) == 1:
             distributed_defaults = filtered_config_defaults[0]
-            default_dashboard_link = distributed_defaults["distributed"]["dashboard"]["link"]
+            default_dashboard_link = distributed_defaults["distributed"]["dashboard"][
+                "link"
+            ]
         else:
             raise ValueError("Dask default config does not have the correct format")
 
         default_dashboard_link = default_dashboard_link
         dask.config.set({"distributed.dashboard.link": default_dashboard_link})
-    
-        cluster = LocalCluster(n_workers=2, dashboard_address=':8787')
+
+        cluster = LocalCluster(n_workers=2, dashboard_address=":8787")
         client = Client(cluster)
-    
+
     logging.info(f"Using client: {client}")
     logging.info(f"Client dashboard_link set to: {client.dashboard_link}")
-
-    # Sleep for a specified duration 
-    # sleep_duration = 30
-    # distributed.print("Sleeping for {sleep_duration} seconds to allow time for testing the dashboard.", file=sys.stdout)
-    # time.sleep(sleep_duration)
 
     ddf = get_dask_dataframe(
         tsv_file=tsv_file_in,
@@ -1003,17 +1054,12 @@ def convert_to_parquet(
         dtype_dict=dtype_dict,
         cat_cols=cat_cols,
         max_categories=max_categories,
-        encoding=encoding
+        encoding=encoding,
     )
 
     ddf = reshape_ddf(ddf, nrows=nrows, npartitions=npartitions)
 
-    write_to_parquet(
-        ddf=ddf,
-        out_path=out_dir,
-        settings=settings,
-        force=force
-    )
+    write_to_parquet(ddf=ddf, out_path=out_dir, settings=settings, force=force)
 
     create_readme(
         out_dir,
@@ -1028,8 +1074,8 @@ def convert_to_parquet(
             "tab_offset": offset,
             "force": force,
             "dtype_dict": dtype_dict,
-            "settings": settings
-        }
+            "settings": settings,
+        },
     )
 
 
@@ -1114,10 +1160,13 @@ def get_required_type(data_dict, cat_cols, encoding_type=False):
     """
     types_list = []
     if encoding_type:
-        types_list = data_dict.main_table.loc[
-                data_dict.main_table["Type"].isin(cat_cols),
-                "Encoding_type"
-            ].unique().tolist()
+        types_list = (
+            data_dict.main_table.loc[
+                data_dict.main_table["Type"].isin(cat_cols), "Encoding_type"
+            ]
+            .unique()
+            .tolist()
+        )
     else:
         types_list = data_dict.main_table["Type"].unique().tolist()
         types_list = [my_type for my_type in types_list if my_type not in cat_cols]
@@ -1160,19 +1209,13 @@ def get_missing_types_in_dtype_dict(dtype_dict, data_dict, cat_cols):
         of these the missing data types will be stored in a list.
     """
     required_types = get_required_type(data_dict, cat_cols, encoding_type=False)
-    required_encoding_types = get_required_type(data_dict,
-                                                cat_cols,
-                                                encoding_type=True)
+    required_encoding_types = get_required_type(data_dict, cat_cols, encoding_type=True)
 
     types_not_present = {
-        "Type":  create_missing_type_set(
-            dtype_dict["Type"].keys(),
-            required_types
-        ),
+        "Type": create_missing_type_set(dtype_dict["Type"].keys(), required_types),
         "Encoding_type": create_missing_type_set(
-            dtype_dict["Encoding_type"].keys(),
-            required_encoding_types
-        )
+            dtype_dict["Encoding_type"].keys(), required_encoding_types
+        ),
     }
     return types_not_present
 
@@ -1202,11 +1245,15 @@ def parse_dtype_dict_args(dtype_args, default_dict):
 
         # Check for duplicated dtype keys
         if len(dtype_arg_set) < len(dtype_args):
-            logging.warning("Duplicated dtypes found in given dtype arguments.:"
-                            "Make sure to specify each dtype once.")
+            logging.warning(
+                "Duplicated dtypes found in given dtype arguments.:"
+                "Make sure to specify each dtype once."
+            )
 
-    logging.info("Using the following dtype dict to convert data types:\n"
-                 f"{json.dumps(dtype_dict, indent=4)}")
+    logging.info(
+        "Using the following dtype dict to convert data types:\n"
+        f"{json.dumps(dtype_dict, indent=4)}"
+    )
     return dtype_dict
 
 
@@ -1235,7 +1282,8 @@ def parse_settings_args(settings_args):
                     "Could not split value the settings option"
                     f" ({settings_arg}) by '='. Make sure to give settings"
                     " options in the format 'key=value', and if multiple"
-                    " options are given seperate them by whitespace.")
+                    " options are given seperate them by whitespace."
+                )
             settings[split_arg[0]] = split_arg[1]
     return settings
 
@@ -1251,29 +1299,33 @@ def main(args):
     ukb_file_name = args.ukb_file.name
     data_dict_name = args.data_dict.name
 
-    logging.info(f"Starting main function to convert {ukb_file_name} to"
-                 " parquet format.")
+    logging.info(
+        f"Starting main function to convert {ukb_file_name} to" " parquet format."
+    )
 
     # check if ukb_file file exists
-    if not (os.path.isfile(ukb_file_name)
-            and os.access(ukb_file_name, os.R_OK)):
+    if not (os.path.isfile(ukb_file_name) and os.access(ukb_file_name, os.R_OK)):
         raise IOError(f"File {ukb_file_name} doesn't exist or isn't readable")
 
     # check if data_dict file exists
-    if not (os.path.isfile(data_dict_name)
-            and os.access(data_dict_name, os.R_OK)):
+    if not (os.path.isfile(data_dict_name) and os.access(data_dict_name, os.R_OK)):
         raise IOError(f"File {data_dict_name} doesn't exist or isn't readable")
 
     data_dict = UKB_DataDict(data_dict_name)
     try:
-        logging.info("Trying to retrieve main table from the data"
-                     f" dictionary ({data_dict_name})")
+        logging.info(
+            "Trying to retrieve main table from the data"
+            f" dictionary ({data_dict_name})"
+        )
         data_dict.main_table
-        logging.info("Done retrieving main table from the data dictionary"
-                     f" ({data_dict_name})")
+        logging.info(
+            "Done retrieving main table from the data dictionary" f" ({data_dict_name})"
+        )
     except Exception as e:
-        raise ValueError("Could not retrieve main table from data"
-                         f" dictionary file ({data_dict_name})") from e
+        raise ValueError(
+            "Could not retrieve main table from data"
+            f" dictionary file ({data_dict_name})"
+        ) from e
     column_names = get_column_names(ukb_file_name, data_dict)
 
     dtype_dict = {}
@@ -1283,8 +1335,9 @@ def main(args):
             dtype_dict_args, DEFAULT_DTYPE_DICT[dtype_dict_type]
         )
 
-    missing_types = get_missing_types_in_dtype_dict(dtype_dict, data_dict,
-                                                    args.categorical_cols)
+    missing_types = get_missing_types_in_dtype_dict(
+        dtype_dict, data_dict, args.categorical_cols
+    )
     if missing_types["Type"] or missing_types["Encoding_type"]:
         raise ValueError(
             "Some types found in data_dict are not present in dtype_dict,"
@@ -1306,7 +1359,7 @@ def main(args):
         force=args.force,
         cat_cols=args.categorical_cols,
         max_categories=args.max_categories,
-        encoding=args.encoding
+        encoding=args.encoding,
     )
 
 
@@ -1328,29 +1381,22 @@ def main_cli():
 
     # Set log file
     set_logfile(args)
-    joined_args = ", ".join(
-        [f"\n\t{arg}: {getattr(args, arg)}" for arg in vars(args)]
-    )
-    logging.info("Parsed following args: {args}".format(
-        args=joined_args
-    ))
+    joined_args = ", ".join([f"\n\t{arg}: {getattr(args, arg)}" for arg in vars(args)])
+    logging.info("Parsed following args: {args}".format(args=joined_args))
 
     try:
         main(args)
     except Exception:
-        logfile_path = logging \
-            .getLoggerClass() \
-            .root \
-            .handlers[0] \
-            .baseFilename
-        msg = (f"An exception while converting {args.ukb_file.name}"
-               f" to {args.out_dir} parquet file, see {logfile_path}")
+        logfile_path = logging.getLoggerClass().root.handlers[0].baseFilename
+        msg = (
+            f"An exception while converting {args.ukb_file.name}"
+            f" to {args.out_dir} parquet file, see {logfile_path}"
+        )
         utils.exit_script(
-            ("An exception occured during the execution of the"
-             f"{__file__} script."),
+            ("An exception occured during the execution of the" f"{__file__} script."),
             log_function=logging.exception,
             status=1,
-            exit_message=msg
+            exit_message=msg,
         )
 
     logging.info("Script done running, exiting...")
