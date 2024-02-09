@@ -1040,7 +1040,7 @@ def convert_to_parquet(
         default_dashboard_link = default_dashboard_link
         dask.config.set({"distributed.dashboard.link": default_dashboard_link})
 
-        cluster = LocalCluster(n_workers=2, dashboard_address=":8787")
+        cluster = LocalCluster(n_workers=1, dashboard_address=":8787")
         client = Client(cluster)
 
     logging.info(f"Using client: {client}")
