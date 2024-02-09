@@ -15,8 +15,8 @@ jobs:
           
     steps:
       - uses: actions/checkout@v4
-      - name: Setup python for test ${{ matrix.python-version }}
       - uses: actions/setup-python@v5 
+      - name: Setup python for test ${{ matrix.python-version }}
         with:
           python-version: ${{ matrix.python-version }}
         run: |
