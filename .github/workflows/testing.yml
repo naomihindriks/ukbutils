@@ -6,26 +6,26 @@ on:
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: ['3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.11', '3.12']
 
     
           
     steps:
       - uses: actions/checkout@v4
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: actions/setup-python@v5 
+      - name: Setup python for test ${{ matrix.py }}
         with:
-          python-version: ${{ matrix.python-version }}
-          channels: conda-forge
+          python-version: ${{ matrix.python-version }} 
       - name: Install dependencies
         run: |
-            conda install pip
-            pip install "tox>=3.27,<4"
+            python -m pip install --upgrade pip
+            python -m pip install tox tox-gh-actions
       - name: Test with tox
         run:  tox
+        
       
 
         
