@@ -66,3 +66,6 @@ testpaths = [
 addopts = [
     "--import-mode=importlib",
 ]
+
+[tool.black]
+line-length = 88
