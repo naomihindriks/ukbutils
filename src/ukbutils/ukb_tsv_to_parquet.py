@@ -9,8 +9,10 @@ TODO:
     1) Change script to enable utilizing distributed computing on a Slurm
         cluster using Dask:
             - Use Dask Distributed
-            - Create a Dask cluster (SLURMCluster) and client for parallel processing
-                (https://jobqueue.dask.org/en/latest/generated/dask_jobqueue.SLURMCluster.html)
+                - Allow for Localcluster with given amount of workers or 
+                SLURMCluster (dask jobqueue (https://jobqueue.dask.org/en/latest/generated/dask_jobqueue.SLURMCluster.html))
+            - Find good way to comunicate url where dask dashboard can be found
+                - Or let user give options for this 
             - Modify Dask DataFrame operations for distributed computing.
             - Add cli options to specify amount of workers and cluster resources`
     2) Allow specifying column names as input and convert only those columns
@@ -91,7 +93,7 @@ import yaml
 from pathlib import Path
 import subprocess as sp
 import numpy as np
-import pandas as pd
+import pyarrow as pa
 
 import dask
 import dask.dataframe as dd
@@ -101,6 +103,7 @@ from dask.distributed import Client, LocalCluster, get_client
 # Custom scripts
 from ukbutils.UKB_data_dict import UKB_DataDict
 import ukbutils.utils as utils
+import ukbutils.get_translation_dict as gtd
 
 LOG_LEVELS = list(logging.getLevelNamesMapping().keys())
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -128,13 +131,37 @@ DEFAULT_DTYPE_DICT = {
     },
 }
 
+
+DEFAULT_PA_SCHEMA_TYPE = {
+    # Conversions for types (in data dict Type column)
+    "Type": {
+        "Sequence": pa.int64(),
+        "Integer": pa.int64(),
+        "Continuous": pa.float64(),
+        "Text": pa.string(),
+        "Date": pa.date64(),
+        "Time": pa.timestamp("s"),
+        "Compound": pa.string(),
+        "Curve": pa.string(),
+    },
+    # Conversion for categories (in data dict Ecoding_type column)
+    # if there are more than x amount of categories.
+    "Encoding_type": {
+        "Integer": pa.int64(),
+        "Real": pa.float64(),
+        "ERROR": pa.timestamp("s"),
+        "String": pa.string(),
+    },
+}
+
+
 DEFAULT_MAX_CATEGORIES = 256
 DEFAULT_CATEGORICAL_COLUMNS = ["Categorical (single)", "Categorical (multiple)"]
 
 DEFAULT_ENCODING = "windows-1252"
 
 VALID_DTYPE_KEYWORDS = ["date"]
-EXCEEDING_MAX_CAT_KEYWORD = "EXCEEDING MAX LEVELS OF CATEGORY"
+# EXCEEDING_MAX_CAT_KEYWORD = "EXCEEDING MAX LEVELS OF CATEGORY"
 
 
 def parse_args():
@@ -387,318 +414,318 @@ def add_offset_tabs_to_col_names(col_names, offset):
     return col_names
 
 
-def find_date_types(dtype_conversion_dict):
-    """
-    Find the keys in dtype_conversion_dict that correspond to date types.
+# def find_date_types(dtype_conversion_dict):
+#     """
+#     Find the keys in dtype_conversion_dict that correspond to date types.
 
-    Args:
-        dtype_conversion_dict (dict): Dictionary mapping data types to desired
-            data types.
+#     Args:
+#         dtype_conversion_dict (dict): Dictionary mapping data types to desired
+#             data types.
 
-    Returns:
-        set: Set of keys corresponding to date types in dtype_conversion_dict.
-    """
-    date_type_keys = set()
-    # Find which keys have a date value inside the dtype["Type"] dict:
-    for key in dtype_conversion_dict:
-        if isinstance(dtype_conversion_dict[key], list):
-            if dtype_conversion_dict[key][0] == "Date":
-                date_type_keys.add(key)
-                logging.info(f"Found date type '{key}' in dtype_conversion_dict")
-    return date_type_keys
-
-
-def determine_categorical_dtype(
-    main_table_entry, data_dict, conversion_table_encoding, categorical_max_size=256
-):
-    """
-    Determine the appropriate Pandas CategoricalDtype for a categorical
-    column in the UK Biobank dataset.
-
-    Args:
-        main_table_entry (pandas.Series): A row from the main table of the
-            UK Biobank data dictionary.
-        data_dict (UKB_DataDict): An instance of the UKB_DataDict class
-            containing information about the data dictionary.
-        conversion_table_encoding (dict): A dictionary mapping encoding types
-            to Pandas dtype.
-        categorical_max_size (int, optional): The maximum number of levels
-            that can be present in a categorical column. Defaults to 256.
-
-    Returns:
-        pandas.CategoricalDtype or str: The Pandas dtype for the categorical
-            column or a special keyword if exceeding the maximum levels.
-
-    Raises:
-        ValueError: If the necessary information for determining the dtype
-            is not found in the provided data.
-
-    """
-    num_members = main_table_entry["Encoding_num_members"].item()
-
-    if np.isnan(num_members) or main_table_entry["Encoding_type"].isna().item():
-        raise ValueError(
-            'Trying to parse {} as categorical, but no "Encoding_num_members"'
-            " item found in given dataframe (encoding id: {}, encoding type: {},"
-            " encoding num members: {})".format(
-                main_table_entry["UDI"].item(),
-                main_table_entry["Encoding_id"].item(),
-                main_table_entry["Encoding_type"].item(),
-                main_table_entry["Encoding_num_members"].item(),
-            )
-        )
-
-    if num_members <= categorical_max_size:
-        encoding_id = main_table_entry["Encoding_id"].item()
-        my_encoding_table = data_dict.get_encoding_table(encoding_id)
-
-        if main_table_entry["Is_hierarchical"].item():
-            my_encoding_table = my_encoding_table[
-                my_encoding_table["selectable"] == "Y"
-            ]
-
-        categories = my_encoding_table["Code"].tolist()
-        encoding_type = main_table_entry["Encoding_type"].item()
-        categories = pd.Index(
-            categories, dtype=conversion_table_encoding[encoding_type]
-        )
-
-        try:
-            my_dtype = pd.CategoricalDtype(categories=categories, ordered=False)
-        except Exception as e:
-            raise ValueError(
-                "Something went wrong for setting categories for given dataframe"
-                " (UDI: {}, encoding id: {}, encoding type: {})".format(
-                    main_table_entry["UDI"].item(),
-                    main_table_entry["Encoding_id"].item(),
-                    main_table_entry["Encoding_type"].item(),
-                )
-            ) from e
-
-    else:
-        my_dtype = EXCEEDING_MAX_CAT_KEYWORD
-
-    return my_dtype
+#     Returns:
+#         set: Set of keys corresponding to date types in dtype_conversion_dict.
+#     """
+#     date_type_keys = set()
+#     # Find which keys have a date value inside the dtype["Type"] dict:
+#     for key in dtype_conversion_dict:
+#         if isinstance(dtype_conversion_dict[key], list):
+#             if dtype_conversion_dict[key][0] == "Date":
+#                 date_type_keys.add(key)
+#                 logging.info(f"Found date type '{key}' in dtype_conversion_dict")
+#     return date_type_keys
 
 
-def determine_column_dtype(
-    column_name,
-    data_dict,
-    conversion_table,
-    cat_cols=[],
-    conversion_table_encoding=None,
-    categorical_max_size=256,
-    type_column="Type",
-):
-    """
-    Determine the appropriate Pandas dtype for a column in the UK Biobank
-    dataset, considering optional categorical columns.
+# def determine_categorical_dtype(
+#     main_table_entry, data_dict, conversion_table_encoding, categorical_max_size=256
+# ):
+#     """
+#     Determine the appropriate Pandas CategoricalDtype for a categorical
+#     column in the UK Biobank dataset.
 
-    Args:
-        column_name (str): The name of the column in the UK Biobank dataset.
-        data_dict (UKB_DataDict): An instance of the UKB_DataDict class containing
-            information about the data dictionary.
-        conversion_table (dict): A dictionary mapping UK Biobank types to
-            Pandas dtype.
-        cat_cols (list, optional): A list of column types (e.g.
-            'Categorical (single)'), columns with this type will be treated
-            as categorical. Defaults to an empty list.
-        conversion_table_encoding (dict, optional): A dictionary mapping
-            encoding types to Pandas dtype. Required if cat_cols is provided.
-        categorical_max_size (int, optional): The maximum number of levels
-            that can be present in a categorical column. Defaults to 256.
-        type_column (str, optional): The name of the column containing the
-            UK Biobank types. Defaults to "Type".
+#     Args:
+#         main_table_entry (pandas.Series): A row from the main table of the
+#             UK Biobank data dictionary.
+#         data_dict (UKB_DataDict): An instance of the UKB_DataDict class
+#             containing information about the data dictionary.
+#         conversion_table_encoding (dict): A dictionary mapping encoding types
+#             to Pandas dtype.
+#         categorical_max_size (int, optional): The maximum number of levels
+#             that can be present in a categorical column. Defaults to 256.
 
-    Returns:
-        Pandas dtype: The Pandas dtype for the specified column.
+#     Returns:
+#         pandas.CategoricalDtype or str: The Pandas dtype for the categorical
+#             column or a special keyword if exceeding the maximum levels.
 
-    Raises:
-        ValueError: If the necessary information for determining the dtype
-            is not found in the provided data or if an invalid configuration
-            is detected.
-    """
-    if cat_cols:
-        # TODO raise valueerror if cat_cols but no conversion_table_encoding given
-        pass
+#     Raises:
+#         ValueError: If the necessary information for determining the dtype
+#             is not found in the provided data.
 
-    main_table_entry = data_dict.main_table[data_dict.main_table["UDI"] == column_name]
+#     """
+#     num_members = main_table_entry["Encoding_num_members"].item()
 
-    # TODO: add test to check if there is a single row for the given column
-    # name in the main table, throw error if not found or multiple rows
-    ukb_type = main_table_entry[type_column].item()
+#     if np.isnan(num_members) or main_table_entry["Encoding_type"].isna().item():
+#         raise ValueError(
+#             'Trying to parse {} as categorical, but no "Encoding_num_members"'
+#             " item found in given dataframe (encoding id: {}, encoding type: {},"
+#             " encoding num members: {})".format(
+#                 main_table_entry["UDI"].item(),
+#                 main_table_entry["Encoding_id"].item(),
+#                 main_table_entry["Encoding_type"].item(),
+#                 main_table_entry["Encoding_num_members"].item(),
+#             )
+#         )
 
-    if ukb_type in cat_cols:
-        my_d_type = determine_categorical_dtype(
-            main_table_entry, data_dict, conversion_table_encoding, categorical_max_size
-        )
+#     if num_members <= categorical_max_size:
+#         encoding_id = main_table_entry["Encoding_id"].item()
+#         my_encoding_table = data_dict.get_encoding_table(encoding_id)
 
-    else:
-        try:
-            my_d_type = conversion_table[ukb_type]
-        except KeyError:
-            raise ValueError(
-                f"The type {ukb_type} could not be translated"
-                " to a dtype, because it was not present in given"
-                f" conversion_table ({conversion_table})"
-            )
+#         if main_table_entry["Is_hierarchical"].item():
+#             my_encoding_table = my_encoding_table[
+#                 my_encoding_table["selectable"] == "Y"
+#             ]
 
-    return my_d_type
+#         categories = my_encoding_table["Code"].tolist()
+#         encoding_type = main_table_entry["Encoding_type"].item()
+#         categories = pd.Index(
+#             categories, dtype=conversion_table_encoding[encoding_type]
+#         )
 
+#         try:
+#             my_dtype = pd.CategoricalDtype(categories=categories, ordered=False)
+#         except Exception as e:
+#             raise ValueError(
+#                 "Something went wrong for setting categories for given dataframe"
+#                 " (UDI: {}, encoding id: {}, encoding type: {})".format(
+#                     main_table_entry["UDI"].item(),
+#                     main_table_entry["Encoding_id"].item(),
+#                     main_table_entry["Encoding_type"].item(),
+#                 )
+#             ) from e
 
-def get_date_format_dict(use_columns, data_dict, dtype_dict, max_categories):
-    """
-    Create a dictionary mapping date columns to their respective date formats.
+#     else:
+#         my_dtype = EXCEEDING_MAX_CAT_KEYWORD
 
-    Args:
-        use_columns (list): Iterable containing column names to consider.
-        data_dict (UKB_DataDict): An instance of the UKB_DataDict class
-            containing information about the data dictionary.
-        dtype_dict (dict): Dictionary mapping data types to desired date formats.
-        max_categories (int): Maximum levels allowed in a categorical column
-            for dtype conversion.
-
-    Returns:
-        dict: Dictionary mapping date columns to their respective date formats.
-    """
-    date_type_keys = find_date_types(dtype_dict["Type"])
-    date_type_encoding_keys = find_date_types(dtype_dict["Encoding_type"])
-
-    date_format_dict = {}
-    date_columns_found = 0
-    encoding_date_columns_found = 0
-
-    for col_name in use_columns:
-        col_type = data_dict.main_table.loc[
-            data_dict.main_table["UDI"] == col_name, "Type"
-        ].item()
-        if col_type in date_type_keys:
-            date_format_dict[col_name] = dtype_dict["Type"][col_type][1]
-            date_columns_found += 1
-            logging.debug(
-                f"Column '{col_name}' identified as date type with"
-                f" format: {dtype_dict['Type'][col_type][1]}"
-            )
-
-    encoding_col_columns = data_dict.main_table.loc[
-        data_dict.main_table["Encoding_type"].isin(date_type_encoding_keys)
-        & data_dict.main_table["UDI"].isin(use_columns),
-        "UDI",
-    ]
-
-    for col_name in encoding_col_columns:
-        n_categories = data_dict.main_table.loc[
-            data_dict.main_table["UDI"] == col_name, "Encoding_num_members"
-        ].item()
-
-        if n_categories > max_categories:
-            col_encoding_type = data_dict.main_table.loc[
-                data_dict.main_table["UDI"] == col_name, "Encoding_type"
-            ].item()
-            if col_encoding_type in date_type_encoding_keys:
-                date_format_dict[col_name] = dtype_dict["Encoding_type"][
-                    col_encoding_type
-                ][1]
-                encoding_date_columns_found += 1
-                encoding_format = dtype_dict["Encoding_type"][col_encoding_type][1]
-                logging.debug(
-                    f"Column '{col_name}' identified as date type"
-                    f" with format: {encoding_format}"
-                )
-
-    logging.info(
-        f"Identified {date_columns_found} date columns and"
-        f" {encoding_date_columns_found} encoding date columns."
-    )
-
-    return date_format_dict
+#     return my_dtype
 
 
-def get_types_dict(use_columns, data_dict, dtype_dict, cat_cols, max_num_categories):
-    """
-    Determine data types for columns to use in the dask dataframe
-    read_table function.
+# def determine_column_dtype(
+#     column_name,
+#     data_dict,
+#     conversion_table,
+#     cat_cols=[],
+#     conversion_table_encoding=None,
+#     categorical_max_size=256,
+#     type_column="Type",
+# ):
+#     """
+#     Determine the appropriate Pandas dtype for a column in the UK Biobank
+#     dataset, considering optional categorical columns.
 
-    Args:
-        use_columns (list): List of column names to be used.
-        data_dict (UKB_DataDict): Instance of UKB_DataDict.
-        dtype_dict (dict): Dictionary mapping UK Biobank data types to with
-            data types to use in read_table function.
-        max_num_categories (int): Maximum number of categories for categorical
-            columns. If the number of unique categories in a column exceeds
-            this limit, the dtype will be set according to the values of the
-            category levels, rather than treating it as a categorical column.
+#     Args:
+#         column_name (str): The name of the column in the UK Biobank dataset.
+#         data_dict (UKB_DataDict): An instance of the UKB_DataDict class containing
+#             information about the data dictionary.
+#         conversion_table (dict): A dictionary mapping UK Biobank types to
+#             Pandas dtype.
+#         cat_cols (list, optional): A list of column types (e.g.
+#             'Categorical (single)'), columns with this type will be treated
+#             as categorical. Defaults to an empty list.
+#         conversion_table_encoding (dict, optional): A dictionary mapping
+#             encoding types to Pandas dtype. Required if cat_cols is provided.
+#         categorical_max_size (int, optional): The maximum number of levels
+#             that can be present in a categorical column. Defaults to 256.
+#         type_column (str, optional): The name of the column containing the
+#             UK Biobank types. Defaults to "Type".
 
-    Returns:
-        tuple: Tuple containing:
-            - types (dict): A dictionary where keys are column names from
-                `use_columns` and values are the corresponding data types to
-                be used in the dask dataframe.
-            - parse_dates_columns (list): A list of column names to be parsed
-                as dates.
-    """
-    # TODO: add more logging?
-    logging.info(
-        "Determining dtypes for columns to use in the dask dataframe"
-        "read_table function"
-    )
+#     Returns:
+#         Pandas dtype: The Pandas dtype for the specified column.
 
-    date_type_keys = find_date_types(dtype_dict["Type"])
-    date_type_encoding_keys = find_date_types(dtype_dict["Encoding_type"])
+#     Raises:
+#         ValueError: If the necessary information for determining the dtype
+#             is not found in the provided data or if an invalid configuration
+#             is detected.
+#     """
+#     if cat_cols:
+#         # TODO raise valueerror if cat_cols but no conversion_table_encoding given
+#         pass
 
-    # Call the determine_column_dtype function for every column that is
-    # not considered a "Date" type
-    types_dict = {
-        col_name: determine_column_dtype(
-            col_name,
-            data_dict,
-            dtype_dict["Type"],
-            cat_cols,
-            dtype_dict["Encoding_type"],
-            max_num_categories,
-        )
-        for col_name in use_columns
-        if not (
-            data_dict.main_table.loc[
-                data_dict.main_table["UDI"] == col_name, "Type"
-            ].item()
-            in date_type_keys
-        )
-    }
-    logging.info(f"Initial types dict has length {len(types_dict)}")
+#     main_table_entry = data_dict.main_table[data_dict.main_table["UDI"] == column_name]
 
-    unprocessed_date_cols = [
-        col_name
-        for col_name in types_dict
-        if (
-            types_dict[col_name] == EXCEEDING_MAX_CAT_KEYWORD
-            and data_dict.main_table.loc[
-                data_dict.main_table["UDI"] == col_name, "Encoding_type"
-            ].item()
-            in date_type_encoding_keys
-        )
-    ]
+#     # TODO: add test to check if there is a single row for the given column
+#     # name in the main table, throw error if not found or multiple rows
+#     ukb_type = main_table_entry[type_column].item()
 
-    unprocessed_non_date_cols = {
-        col_name: determine_column_dtype(
-            col_name,
-            data_dict,
-            dtype_dict["Encoding_type"],
-            type_column="Encoding_type",
-        )
-        for col_name in types_dict
-        if (
-            types_dict[col_name] == EXCEEDING_MAX_CAT_KEYWORD
-            and col_name not in unprocessed_date_cols
-        )
-    }
+#     if ukb_type in cat_cols:
+#         my_d_type = determine_categorical_dtype(
+#             main_table_entry, data_dict, conversion_table_encoding, categorical_max_size
+#         )
 
-    types_dict.update(unprocessed_non_date_cols)
+#     else:
+#         try:
+#             my_d_type = conversion_table[ukb_type]
+#         except KeyError:
+#             raise ValueError(
+#                 f"The type {ukb_type} could not be translated"
+#                 " to a dtype, because it was not present in given"
+#                 f" conversion_table ({conversion_table})"
+#             )
 
-    for my_col in unprocessed_date_cols:
-        del types_dict[my_col]
+#     return my_d_type
 
-    return types_dict
+
+# def get_date_format_dict(use_columns, data_dict, dtype_dict, max_categories):
+#     """
+#     Create a dictionary mapping date columns to their respective date formats.
+
+#     Args:
+#         use_columns (list): Iterable containing column names to consider.
+#         data_dict (UKB_DataDict): An instance of the UKB_DataDict class
+#             containing information about the data dictionary.
+#         dtype_dict (dict): Dictionary mapping data types to desired date formats.
+#         max_categories (int): Maximum levels allowed in a categorical column
+#             for dtype conversion.
+
+#     Returns:
+#         dict: Dictionary mapping date columns to their respective date formats.
+#     """
+#     date_type_keys = find_date_types(dtype_dict["Type"])
+#     date_type_encoding_keys = find_date_types(dtype_dict["Encoding_type"])
+
+#     date_format_dict = {}
+#     date_columns_found = 0
+#     encoding_date_columns_found = 0
+
+#     for col_name in use_columns:
+#         col_type = data_dict.main_table.loc[
+#             data_dict.main_table["UDI"] == col_name, "Type"
+#         ].item()
+#         if col_type in date_type_keys:
+#             date_format_dict[col_name] = dtype_dict["Type"][col_type][1]
+#             date_columns_found += 1
+#             logging.debug(
+#                 f"Column '{col_name}' identified as date type with"
+#                 f" format: {dtype_dict['Type'][col_type][1]}"
+#             )
+
+#     encoding_date_columns = data_dict.main_table.loc[
+#         data_dict.main_table["Encoding_type"].isin(date_type_encoding_keys)
+#         & data_dict.main_table["UDI"].isin(use_columns),
+#         "UDI",
+#     ]
+
+#     for col_name in encoding_date_columns:
+#         n_categories = data_dict.main_table.loc[
+#             data_dict.main_table["UDI"] == col_name, "Encoding_num_members"
+#         ].item()
+
+#         if n_categories > max_categories:
+#             col_encoding_type = data_dict.main_table.loc[
+#                 data_dict.main_table["UDI"] == col_name, "Encoding_type"
+#             ].item()
+#             if col_encoding_type in date_type_encoding_keys:
+#                 date_format_dict[col_name] = dtype_dict["Encoding_type"][
+#                     col_encoding_type
+#                 ][1]
+#                 encoding_date_columns_found += 1
+#                 encoding_format = dtype_dict["Encoding_type"][col_encoding_type][1]
+#                 logging.debug(
+#                     f"Column '{col_name}' identified as date type"
+#                     f" with format: {encoding_format}"
+#                 )
+
+#     logging.info(
+#         f"Identified {date_columns_found} date columns and"
+#         f" {encoding_date_columns_found} encoding date columns."
+#     )
+
+#     return date_format_dict
+
+
+# def get_types_dict(use_columns, data_dict, dtype_dict, cat_cols, max_num_categories):
+#     """
+#     Determine data types for columns to use in the dask dataframe
+#     read_table function.
+
+#     Args:
+#         use_columns (list): List of column names to be used.
+#         data_dict (UKB_DataDict): Instance of UKB_DataDict.
+#         dtype_dict (dict): Dictionary mapping UK Biobank data types to with
+#             data types to use in read_table function.
+#         max_num_categories (int): Maximum number of categories for categorical
+#             columns. If the number of unique categories in a column exceeds
+#             this limit, the dtype will be set according to the values of the
+#             category levels, rather than treating it as a categorical column.
+
+#     Returns:
+#         tuple: Tuple containing:
+#             - types (dict): A dictionary where keys are column names from
+#                 `use_columns` and values are the corresponding data types to
+#                 be used in the dask dataframe.
+#             - parse_dates_columns (list): A list of column names to be parsed
+#                 as dates.
+#     """
+#     # TODO: add more logging?
+#     logging.info(
+#         "Determining dtypes for columns to use in the dask dataframe"
+#         "read_table function"
+#     )
+
+#     date_type_keys = find_date_types(dtype_dict["Type"])
+#     date_type_encoding_keys = find_date_types(dtype_dict["Encoding_type"])
+
+#     # Call the determine_column_dtype function for every column that is
+#     # not considered a "Date" type
+#     types_dict = {
+#         col_name: determine_column_dtype(
+#             col_name,
+#             data_dict,
+#             dtype_dict["Type"],
+#             cat_cols,
+#             dtype_dict["Encoding_type"],
+#             max_num_categories,
+#         )
+#         for col_name in use_columns
+#         if not (
+#             data_dict.main_table.loc[
+#                 data_dict.main_table["UDI"] == col_name, "Type"
+#             ].item()
+#             in date_type_keys
+#         )
+#     }
+#     logging.info(f"Initial types dict has length {len(types_dict)}")
+
+#     unprocessed_date_cols = [
+#         col_name
+#         for col_name in types_dict
+#         if (
+#             types_dict[col_name] == EXCEEDING_MAX_CAT_KEYWORD
+#             and data_dict.main_table.loc[
+#                 data_dict.main_table["UDI"] == col_name, "Encoding_type"
+#             ].item()
+#             in date_type_encoding_keys
+#         )
+#     ]
+
+#     unprocessed_non_date_cols = {
+#         col_name: determine_column_dtype(
+#             col_name,
+#             data_dict,
+#             dtype_dict["Encoding_type"],
+#             type_column="Encoding_type",
+#         )
+#         for col_name in types_dict
+#         if (
+#             types_dict[col_name] == EXCEEDING_MAX_CAT_KEYWORD
+#             and col_name not in unprocessed_date_cols
+#         )
+#     }
+
+#     types_dict.update(unprocessed_non_date_cols)
+
+#     for my_col in unprocessed_date_cols:
+#         del types_dict[my_col]
+
+#     return types_dict
 
 
 def get_dask_dataframe(
@@ -740,10 +767,12 @@ def get_dask_dataframe(
     logging.info("Starting process to load data into dask dataframe.")
     col_names_with_offset = add_offset_tabs_to_col_names(col_names, offset)
 
-    types = get_types_dict(col_names, data_dict, dtype_dict, cat_cols, max_categories)
+    types = gtd.get_d_type_dict(
+        col_names, data_dict, dtype_dict, cat_cols, max_categories
+    )
     logging.info("Succesfuly create dtypes dict")
 
-    date_format_dict = get_date_format_dict(
+    date_format_dict = gtd.get_date_format_dict(
         col_names, data_dict, dtype_dict, max_categories
     )
 
@@ -864,7 +893,7 @@ def create_readme(dir_path, config, description=None):
         logging.error(f"Error writing README file: {str(e)}")
 
 
-def write_to_parquet(ddf, out_path, settings, force):
+def write_to_parquet(ddf, out_path, schema, settings, force):
     """
     Write the Dask dataframe to Parquet format.
 
@@ -911,7 +940,7 @@ def write_to_parquet(ddf, out_path, settings, force):
         "Trying to write dataframe to parquet format with following"
         f" settings:\n{settings}"
     )
-    ddf.to_parquet(out_path, **settings)
+    ddf.to_parquet(out_path, schema=schema, **settings)
 
     logging.info(
         "Done writing dataframe to parquet format with following"
@@ -1022,30 +1051,6 @@ def convert_to_parquet(
     Returns:
         None
     """
-    try:
-        client = get_client()
-        logging.info(f"Found client: {client}")
-    except ValueError:
-        filtered_config_defaults = list(
-            filter(lambda x: "distributed" in x.keys(), dask.config.defaults)
-        )
-        if len(filtered_config_defaults) == 1:
-            distributed_defaults = filtered_config_defaults[0]
-            default_dashboard_link = distributed_defaults["distributed"]["dashboard"][
-                "link"
-            ]
-        else:
-            raise ValueError("Dask default config does not have the correct format")
-
-        default_dashboard_link = default_dashboard_link
-        dask.config.set({"distributed.dashboard.link": default_dashboard_link})
-
-        cluster = LocalCluster(n_workers=1, dashboard_address=":8787")
-        client = Client(cluster)
-
-    logging.info(f"Using client: {client}")
-    logging.info(f"Client dashboard_link set to: {client.dashboard_link}")
-
     ddf = get_dask_dataframe(
         tsv_file=tsv_file_in,
         col_names=column_names,
@@ -1059,7 +1064,18 @@ def convert_to_parquet(
 
     ddf = reshape_ddf(ddf, nrows=nrows, npartitions=npartitions)
 
-    write_to_parquet(ddf=ddf, out_path=out_dir, settings=settings, force=force)
+    schema = gtd.get_pa_schema(
+        use_columns=column_names,
+        data_dict=data_dict,
+        pa_type_dict=DEFAULT_PA_SCHEMA_TYPE,
+        cat_cols=cat_cols,
+        max_num_categories=max_categories,
+    )
+    logging.info(schema)
+
+    write_to_parquet(
+        ddf=ddf, out_path=out_dir, schema=schema, settings=settings, force=force
+    )
 
     create_readme(
         out_dir,
@@ -1288,6 +1304,39 @@ def parse_settings_args(settings_args):
     return settings
 
 
+def get_local_client(n_workers=2, port="8787"):
+    # try:
+    #     client = Client(f"tcp://localhost:{port}", timeout="2s")
+    # except TimeoutError:
+
+    #     pass
+
+    try:
+        client = get_client()
+        logging.info(f"Found client: {client}")
+    except ValueError:
+        filtered_config_defaults = list(
+            filter(lambda x: "distributed" in x.keys(), dask.config.defaults)
+        )
+        if len(filtered_config_defaults) == 1:
+            distributed_defaults = filtered_config_defaults[0]
+            default_dashboard_link = distributed_defaults["distributed"]["dashboard"][
+                "link"
+            ]
+        else:
+            raise ValueError("Dask default config does not have the correct format")
+
+        default_dashboard_link = default_dashboard_link
+        dask.config.set({"distributed.dashboard.link": default_dashboard_link})
+
+        cluster = LocalCluster(n_workers=n_workers, dashboard_address=":8787")
+        client = Client(cluster)
+
+    logging.info(f"Using client: {client}")
+    logging.info(f"Client dashboard_link set to: {client.dashboard_link}")
+    return client
+
+
 def main(args):
     """
     Main function to convert UK Biobank TSV file to Parquet format based on
@@ -1310,6 +1359,8 @@ def main(args):
     # check if data_dict file exists
     if not (os.path.isfile(data_dict_name) and os.access(data_dict_name, os.R_OK)):
         raise IOError(f"File {data_dict_name} doesn't exist or isn't readable")
+
+    get_local_client()
 
     data_dict = UKB_DataDict(data_dict_name)
     try:
