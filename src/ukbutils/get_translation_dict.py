@@ -1,3 +1,21 @@
+"""
+UK Biobank DataType Mapping Script
+
+This script provides functions to create dictionaries that map UK Biobank columns
+to desired data types. Currently, it supports mapping columns to pandas dtypes and
+pyarrow schema types. These dictionaries are intended to facilitate data processing
+and storage operations.
+
+Functions meant for external use:
+- get_pa_schema: Creates a dictionary mapping columns to pyarrow schema types.
+- get_date_format_dict: Creates a dictionary mapping date columns to their respective
+  date formats.
+- get_d_type_dict: Creates a dictionary mapping columns to pandas dtypes.
+
+Author:
+    Naomi Hindriks
+"""
+
 import logging
 import numpy as np
 import pandas as pd
@@ -5,56 +23,10 @@ import math
 import pyarrow as pa
 
 
-DEFAULT_DTYPE_DICT = {
-    # Conversions for types (in data dict Type column)
-    "Type": {
-        "Sequence": "int",
-        "Integer": "float",
-        "Continuous": "float",
-        "Text": "string",
-        "Date": ["Date", "%Y-%m-%d"],
-        "Time": ["Date", "%Y-%m-%d %H:%M:%S"],
-        "Compound": "string",
-        "Curve": "string",
-    },
-    # Conversion for categories (in data dict Ecoding_type column)
-    # if there are more than x amount of categories.
-    "Encoding_type": {
-        "Integer": "float",
-        "Real": "float",
-        "ERROR": ["Date", "%Y-%m-%d"],
-        "String": "string",
-    },
-}
-
-
-DEFAULT_PA_SCHEMA_TYPE = {
-    # Conversions for types (in data dict Type column)
-    "Type": {
-        "Sequence": pa.int64(),
-        "Integer": pa.int64(),
-        "Continuous": pa.float64(),
-        "Text": pa.string(),
-        "Date": pa.date64(),
-        "Time": pa.timestamp("s"),
-        "Compound": pa.string(),
-        "Curve": pa.string(),
-    },
-    # Conversion for categories (in data dict Ecoding_type column)
-    # if there are more than x amount of categories.
-    "Encoding_type": {
-        "Integer": pa.int64(),
-        "Real": pa.float64(),
-        "ERROR": pa.timestamp("s"),
-        "String": pa.string(),
-    },
-}
-
-
 EXCEEDING_MAX_CAT_KEYWORD = "EXCEEDING MAX LEVELS OF CATEGORY"
 
 
-def find_date_types(dtype_conversion_dict): 
+def _find_date_types(dtype_conversion_dict):
     """
     Find the keys in dtype_conversion_dict that correspond to date types.
 
@@ -75,13 +47,13 @@ def find_date_types(dtype_conversion_dict):
     return date_type_keys
 
 
-def get_pyarrow_int_func_for_dict(num_of_categories):
+def _get_pyarrow_int_func_for_dict(num_of_categories):
     """
-    Return the pyarrow unsigned integer constructor needed to create a pyarrow 
+    Return the pyarrow unsigned integer constructor needed to create a pyarrow
     dictionary for the given number of categories.
 
     Args:
-        num_of_categories (int): The number of categories that need to fit in 
+        num_of_categories (int): The number of categories that need to fit in
             the dictionary.
 
     Returns:
@@ -95,18 +67,18 @@ def get_pyarrow_int_func_for_dict(num_of_categories):
         return int_func
 
 
-def determine_categorical_type_pyarrow(
+def _determine_categorical_type_pyarrow(
     main_table_entry, data_dict, conversion_table_encoding, num_members
 ):
     """
     Translate UK Biobank categorical type to PyArrow dictionary type (pa.dictionary).
 
     Args:
-        main_table_entry (pandas.Series): A row from the main table of the UK Biobank 
+        main_table_entry (pandas.Series): A row from the main table of the UK Biobank
             data dictionary.
-        data_dict (UKB_DataDict): An instance of the UKB_DataDict class containing 
+        data_dict (UKB_DataDict): An instance of the UKB_DataDict class containing
             information about the data dictionary.
-        conversion_table_encoding (dict): A dictionary mapping encoding types to 
+        conversion_table_encoding (dict): A dictionary mapping encoding types to
             Pyarrow types.
         num_members (int): Number of levels in categorical.
 
@@ -125,7 +97,7 @@ def determine_categorical_type_pyarrow(
     encoding_type = main_table_entry["Encoding_type"].item()
 
     try:
-        int_func = get_pyarrow_int_func_for_dict(num_members)
+        int_func = _get_pyarrow_int_func_for_dict(num_members)
         logging.info(f"set int_func to {int_func}")
         my_type = pa.dictionary(
             index_type=int_func(), value_type=conversion_table_encoding[encoding_type]
@@ -143,18 +115,18 @@ def determine_categorical_type_pyarrow(
     return my_type
 
 
-def determine_categorical_type_dtype(
+def _determine_categorical_type_dtype(
     main_table_entry, data_dict, conversion_table_encoding, num_members
 ):
     """
     Function that translates UK Biobank categorical type to Pandas CategoricalDtype.
 
     Args:
-        main_table_entry (pandas.Series): A row from the main table of the UK Biobank 
+        main_table_entry (pandas.Series): A row from the main table of the UK Biobank
             data dictionary.
-        data_dict (UKB_DataDict): An instance of the UKB_DataDict class containing 
+        data_dict (UKB_DataDict): An instance of the UKB_DataDict class containing
             information about the data dictionary.
-        conversion_table_encoding (dict): A dictionary mapping encoding types to 
+        conversion_table_encoding (dict): A dictionary mapping encoding types to
             Pandas dtype.
         num_members (int): Number of levels in categorical.
 
@@ -189,7 +161,7 @@ def determine_categorical_type_dtype(
     return my_type
 
 
-def determine_categorical_type(
+def _determine_categorical_type(
     main_table_entry,
     data_dict,
     conversion_table_encoding,
@@ -197,15 +169,15 @@ def determine_categorical_type(
     categorical_max_size=256,
 ):
     """
-    Determine the appropriate type for a categorical column in the UK Biobank 
+    Determine the appropriate type for a categorical column in the UK Biobank
     dataset given the conversion_table_encoding and conversion_function.
 
     Args:
-        main_table_entry (pandas.Series): A row from the main table of the UK 
+        main_table_entry (pandas.Series): A row from the main table of the UK
             Biobank data dictionary.
-        data_dict (UKB_DataDict): An instance of the UKB_DataDict class containing 
+        data_dict (UKB_DataDict): An instance of the UKB_DataDict class containing
             information about the data dictionary.
-        conversion_table_encoding (dict): A dictionary mapping encoding types to 
+        conversion_table_encoding (dict): A dictionary mapping encoding types to
             Pandas dtype.
         conversion_function (function): A function that does the actual translation.
         categorical_max_size (int, optional): The maximum number of levels
@@ -244,13 +216,13 @@ def determine_categorical_type(
     return my_type
 
 
-def determine_column_type(
+def _determine_column_type(
     column_name,
     data_dict,
     conversion_table,
     categorical_conversion_method,
     cat_cols,
-    categorical_max_size
+    categorical_max_size,
 ):
     """
     Determine the appropriate type for a column in the UK Biobank
@@ -263,17 +235,17 @@ def determine_column_type(
             information about the data dictionary.
         conversion_table (dict): A dictionary mapping UK Biobank types to
             desired type.
-        categorical_conversion_method: A function that will be called to perform 
+        categorical_conversion_method: A function that will be called to perform
             categorical conversion.
         cat_cols (list): A list of column types (e.g.
             'Categorical (single)'), columns with this type will be treated
             as categorical.
         categorical_max_size (int): The maximum number of levels
-            that can be present in a categorical column. If the categorical type 
+            that can be present in a categorical column. If the categorical type
             exeecds this number it will be translated to it's Encoding_type
 
     Returns:
-        The type found in the conversion_table, or in case of categorical the return 
+        The type found in the conversion_table, or in case of categorical the return
             of the categorical_conversion_method,
 
     Raises:
@@ -291,18 +263,20 @@ def determine_column_type(
     ukb_type = main_table_entry["Type"].item()
 
     if ukb_type in cat_cols:
-        my_type = determine_categorical_type(
-            main_table_entry, data_dict, conversion_table_encoding, categorical_conversion_method, categorical_max_size
+        my_type = _determine_categorical_type(
+            main_table_entry,
+            data_dict,
+            conversion_table_encoding,
+            categorical_conversion_method,
+            categorical_max_size,
         )
-        # categorical_conversion_method(
-        #     main_table_entry, data_dict, conversion_table_encoding, categorical_max_size
-        # )
         if my_type == EXCEEDING_MAX_CAT_KEYWORD:
+            encoding_type = main_table_entry["Encoding_type"].item()
             try:
-                my_type = conversion_table_encoding[ukb_type]
+                my_type = conversion_table_encoding[encoding_type]
             except KeyError:
                 raise ValueError(
-                    f"The type {ukb_type} could not be translated"
+                    f"The type {encoding_type} could not be translated"
                     " to a dtype, because it was not present in given"
                     f" conversion_table_encoding ({conversion_table_encoding})"
                 )
@@ -348,17 +322,17 @@ def get_d_type_dict(use_columns, data_dict, dtype_dict, cat_cols, max_num_catego
         "read_table function"
     )
 
-    date_type_keys = find_date_types(dtype_dict["Type"])
-    # date_type_encoding_keys = find_date_types(dtype_dict["Encoding_type"])
+    date_type_keys = _find_date_types(dtype_dict["Type"])
+    # date_type_encoding_keys = _find_date_types(dtype_dict["Encoding_type"])
 
-    # Call the determine_column_type function for every column that is
+    # Call the _determine_column_type function for every column that is
     # not considered a "Date" type
     types_dict = {
-        col_name: determine_column_type(
+        col_name: _determine_column_type(
             col_name,
             data_dict,
             dtype_dict,
-            determine_categorical_type_dtype,
+            _determine_categorical_type_dtype,
             cat_cols,
             max_num_categories,
         )
@@ -375,7 +349,7 @@ def get_d_type_dict(use_columns, data_dict, dtype_dict, cat_cols, max_num_catego
     for col_name in types_dict:
         if isinstance(types_dict[col_name], list):
             if types_dict[col_name][0] == "Date":
-                del types_dict[my_col]
+                del types_dict[col_name]
 
     return types_dict
 
@@ -395,8 +369,8 @@ def get_date_format_dict(use_columns, data_dict, dtype_dict, max_categories):
     Returns:
         dict: Dictionary mapping date columns to their respective date formats.
     """
-    date_type_keys = find_date_types(dtype_dict["Type"])
-    date_type_encoding_keys = find_date_types(dtype_dict["Encoding_type"])
+    date_type_keys = _find_date_types(dtype_dict["Type"])
+    date_type_encoding_keys = _find_date_types(dtype_dict["Encoding_type"])
 
     date_format_dict = {}
     date_columns_found = 0
@@ -472,15 +446,15 @@ def get_pa_schema(use_columns, data_dict, pa_type_dict, cat_cols, max_num_catego
     logging.info("Determining pyarrow types for schema to write to parquet file")
 
     pyarrow_schema = {
-        col_name: determine_column_type(
+        col_name: _determine_column_type(
             col_name,
             data_dict,
             pa_type_dict,
-            determine_categorical_type_pyarrow,
+            _determine_categorical_type_pyarrow,
             cat_cols,
             max_num_categories,
         )
         for col_name in use_columns
     }
-    
+
     return pyarrow_schema

@@ -35,6 +35,9 @@ Example:
         --log-dir logs/ \
         --log-file-name mylog.log \
         --log-level DEBUG
+
+Author:
+    Naomi Hindriks
 """
 
 import logging
@@ -537,7 +540,7 @@ def main(tsv_filename, html_filename, config_filename):
 
     col_names = tsv2parquet.get_column_names(tsv_filename, data_dict)
 
-    client = tsv2parquet.get_local_client()
+    tsv2parquet.get_local_client()
 
     for key in config_dict:
         convert_config_to_parquet(

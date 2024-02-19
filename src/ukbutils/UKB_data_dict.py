@@ -23,10 +23,10 @@ class UKB_DataDict:
     """
 
     ENCODING_DOWNLOAD_URL_TEMPLATE = (
-        "https://biobank.ndph.ox.ac.uk/showcase/codown.cgi?id={}"  # noqa: E501
+        "https://biobank.ndph.ox.ac.uk/showcase/codown.cgi?id={}"
     )
     DEFAULT_ENCODING_FILE_TEMPLATE = (
-        "~/ukb-analyses/data/ukb/encoding_dicts/encoding_table_{}.txt"  # noqa: E501
+        "~/ukb-analyses/data/ukb/encoding_dicts/encoding_table_{}.txt"
     )
 
     def __init__(
