@@ -1,7 +1,84 @@
 import pytest
 import sys
+import logging
+import shutil
+import tempfile
+import os
+import time
+import subprocess
+import signal
 
 import ukbutils.utils as utils
+
+
+@pytest.fixture
+def mock_exit_script(monkeypatch):
+    def mock_exit_script_func(message, log_function=logging.error, status=1, exit_message=None):
+        mock_exit_script_func.called = True
+        mock_exit_script_func.message = message
+        mock_exit_script_func.log_function = log_function
+        mock_exit_script_func.status = status
+        mock_exit_script_func.exit_message = exit_message
+
+    mock_exit_script_func.called = False
+    return mock_exit_script_func
+    
+
+def test_exit_script_success(monkeypatch, caplog):
+    # With monkeypatch change behaviour of sys.exit
+    monkeypatch.setattr(sys, 'exit', lambda x: None)
+    with caplog.at_level(logging.INFO):
+        utils.exit_script("Success message")
+        assert "Success message" in caplog.text
+
+
+def test_exit_script_error(caplog, monkeypatch):
+    # Initialize a variable to store the exit message
+    exit_message = None
+
+    # Mocking sys.exit to capture exit status and exit message
+    def mock_exit(x):
+        nonlocal exit_message
+        exit_message = x
+
+    # Mocking sys.exit
+    monkeypatch.setattr(sys, 'exit', mock_exit)
+
+    # Triggering exit_script with an error message and exit message
+    with caplog.at_level(logging.ERROR):
+        utils.exit_script("Error message", log_function=logging.error, status=1, exit_message="Exit message")
+        
+
+    # Asserting that the log message is captured
+    assert "Error message" in caplog.text
+
+    # Asserting that the exit message is set to "Exit message"
+    assert exit_message == "Exit message"
+
+
+def test_signal_handling(mock_exit_script, monkeypatch):
+    # Patch the exit_script function with the mock
+    monkeypatch.setattr(utils, 'exit_script', mock_exit_script)
+
+    signal.signal(signal.SIGTERM, utils.terminate_signal_handler)
+    
+    # Send the SIGTERM signal to the subprocess
+    os.kill(os.getpid(), signal.SIGTERM)
+
+    # Set SIGTERM signal back to default
+    signal.signal(signal.SIGTERM, signal.SIG_DFL)
+
+    # Verify that exit_script was called with the correct parameters
+    assert mock_exit_script.called
+    assert mock_exit_script.status == 1
+    assert mock_exit_script.log_function == logging.error
+    assert mock_exit_script.message == "Process was prematurely terminated"
+    assert mock_exit_script.exit_message == signal.SIGTERM
+
+    
+    
+
+
 
 def test_capture_output():
     with utils.capture() as captured_streams:

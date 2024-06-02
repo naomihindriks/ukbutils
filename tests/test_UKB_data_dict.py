@@ -155,6 +155,3 @@ def test_get_encoding_by_data_field_UDI_not_found(data_dict, field_id, is_udi):
 
 #     assert data_dict._encoding_id_is_valid(valid_encoding_id)
 #     assert not data_dict._encoding_id_is_valid(invalid_encoding_id)
-
-if __name__ == "__main__":
-    pytest.main()

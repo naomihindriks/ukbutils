@@ -32,12 +32,14 @@ dependencies = [
     'dask>=2024.1.1',
     'lxml>=5.0.0',
     "pyarrow>=15.0.0",
-    "numpy>=1.26.0"
+    "numpy>=1.26.0",
+    
 ]
 
 [project.scripts]
 ukb-parquet-from-config = "ukbutils.ukb_config_based_converter:main_cli"
 ukb-to-parquet = "ukbutils.ukb_tsv_to_parquet:main_cli"
+get-ukb-to-parquet-config-template =  "ukbutils.get_template:main_cli"
 
 [project.urls]
 Homepage = "https://github.com/naomihindriks/ukbutils"
@@ -49,8 +51,8 @@ dev = [
     "tox-conda>=0.10.2",
     "flake8>=7.0.0",
     "black>=24.1.1",
-    "flake8-black>=0.3.6"
-    # "tox-gh-actions"
+    "flake8-black>=0.3.6",
+    "tox-gh-actions >=2, <3"
 ]
 
 [tool.setuptools]
@@ -59,12 +61,18 @@ package-dir = {"" = "src"}
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
+
 [tool.pytest.ini_options]
 testpaths = [
     "tests",
 ]
 addopts = [
     "--import-mode=importlib",
+    # "--cov=src/ukbutils", 
+    # "--cov-report=html",
+    # "--cov-report='term-missing'",
 ]
 
 [tool.black]
