@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 """
 Script to generate a template YAML file for the ukb-parquet-from-config CLI tool.
-"""
 
-"""
-Script to generate a template YAML file for the ukb-parquet-from-config CLI tool.
-
-This script generates a template YAML file that can be used as a configuration file 
-for the ukb-parquet-from-config CLI tool. The template YAML file contains default 
+This script generates a template YAML file that can be used as a configuration file
+for the ukb-parquet-from-config CLI tool. The template YAML file contains default
 settings and placeholders for user-defined parameters.
 
 Usage:
-    Run this script with the destination path where you want to store the template YAML file. 
+    Run this script with the destination path where you want to store the
+    template YAML file.
     Example:
         $ python generate_template.py ~/path/to/store/template.yaml
 
@@ -25,9 +22,9 @@ Author:
 import os
 import shutil
 import argparse
-from importlib import resources as impresources
 
-from ukbutils import templates
+from importlib import resources as impresources
+from . import templates
 
 
 def _parse_args():
@@ -43,11 +40,9 @@ def _parse_args():
         )
     )
     arg_parser.add_argument(
-        dest="dest", 
-        help="Path to store the template YAML file.", 
-        type=str
+        dest="dest", help="Path to store the template YAML file.", type=str
     )
-    
+
     return arg_parser.parse_args()
 
 
@@ -85,9 +80,10 @@ def _copy_template(dest_file):
     Copy the template YAML file to the specified destination.
 
     Args:
-        dest_file (str): The destination path where the template YAML file will be copied.
+        dest_file (str): The destination path where the template YAML file will
+        be copied.
     """
-    template_yaml = (impresources.files(templates) / "TEMPLATE_config.yaml")
+    template_yaml = impresources.files(templates) / "TEMPLATE_config.yaml"
     shutil.copyfile(template_yaml, dest_file)
 
 

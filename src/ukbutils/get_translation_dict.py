@@ -88,11 +88,10 @@ def _determine_categorical_type_pyarrow(
     Raises:
         ValueError: If setting categories for the given dataframe fails.
     """
-    encoding_id = main_table_entry["Encoding_id"].item()
-    my_encoding_table = data_dict.get_encoding_table(encoding_id)
+    # my_encoding_table = data_dict.get_encoding_table(encoding_id)
 
-    if main_table_entry["Is_hierarchical"].item():
-        my_encoding_table = my_encoding_table[my_encoding_table["selectable"] == "Y"]
+    # if main_table_entry["Is_hierarchical"].item():
+    #     my_encoding_table = my_encoding_table[my_encoding_table["selectable"] == "Y"]
 
     encoding_type = main_table_entry["Encoding_type"].item()
 

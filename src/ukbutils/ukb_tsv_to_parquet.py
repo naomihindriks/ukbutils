@@ -20,9 +20,9 @@ TODO:
         to parquet.
     3) Improve the README created in the convertion process so the config part
         will be more readable
-    4) There is code for generation of pyarrow schema based on the UK Biobank 
-        datatypes,but this code is not used at the moment. Incoorparate using 
-        pyarrow schema when writing to parquet, give user the option to use specify 
+    4) There is code for generation of pyarrow schema based on the UK Biobank
+        datatypes,but this code is not used at the moment. Incoorparate using
+        pyarrow schema when writing to parquet, give user the option to use specify
         schema in cli
 
 Usage:

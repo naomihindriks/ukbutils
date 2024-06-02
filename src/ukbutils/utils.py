@@ -30,7 +30,8 @@ def exit_script(log_message, log_function=logging.info, status=0, exit_message=N
 
     Args:
         log_message (str): The log message to be logged before exiting.
-        log_function (function): The logging function to use (e.g., logging.info, logging.error).
+        log_function (function): The logging function to use (e.g., logging.info,
+            logging.error).
         status (int): The exit status code (0 for success, non-zero for error).
         exit_message (str, optional): An optional exit message to be displayed.
 
