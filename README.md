@@ -1,6 +1,9 @@
 # UK Biobank Utilities
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![Test](https://github.com/naomihindriks/ukbutils/actions/workflows/testing.yml/badge.svg)](https://github.com/naomihindriks/ukbutils/actions/workflows/testing.yml) ![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fnaomihindriks%2Fukbutils%2Fmain%2Fpyproject.toml%3Ftoken%3DGHSAT0AAAAAACS274G3WAJAMT4FN5ERWIBMZS4HAVA)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
+[![Test](https://github.com/naomihindriks/ukbutils/actions/workflows/testing.yml/badge.svg)](https://github.com/naomihindriks/ukbutils/actions/workflows/testing.yml) 
+![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=pyproject.toml)
+
 
 
 ## Overview
@@ -14,31 +17,13 @@ This Python package provides tools to interact with the UK Biobank data. It incl
 
 ## Installation
 
-This package is not available on PyPI. You can install it by cloning the repository from GitHub and then using pip to install it.
-
 ### Prerequisites
 
 - Python 3.9, 3.10, 3.11, or 3.12
 
-### Steps
-
-1. Clone the repository:
-
-    ```bash
-    git clone https://github.com/yourusername/ukb-utils.git
-    ```
-
-2. Navigate to the directory:
-
-    ```bash
-    cd ukb-utils
-    ```
-
-3. Install the package:
-
-    ```bash
-    pip install .
-    ```
+```bash
+pip install git+https://github.com/naomihindriks/ukbutils.git
+```
 
 ## Usage
 
