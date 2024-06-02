@@ -1,25 +1,53 @@
 # UK Biobank Utilities
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
+
 [![Test](https://github.com/naomihindriks/ukbutils/actions/workflows/testing.yml/badge.svg)](https://github.com/naomihindriks/ukbutils/actions/workflows/testing.yml) 
-![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=pyproject.toml)
+![Python Version from PEP 621 TOML](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Fnaomihindriks%2Fukbutils%2Fmain%2Fpyproject.toml)
+[![MIT License](https://img.shields.io/github/license/naomihindriks/ukbutils.svg)](https://github.com/naomihindriks/ukbutils/blob/main/LICENSE)
+
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#About-The-Project">About The Project</a>
+      <li>
+      <a href="#Getting-Started">Getting Started</a>
+      <ul>
+        <li><a href="#Prerequisites">Prerequisites</a></li>
+        <li><a href="#Installation">Installation</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#Usage">Usage</a>
+      <ul>
+        <li><a href="#Translating-Coded-Values">Translating Coded Values</a></li>
+        <li><a href="#Converting-TSV-to-Parquet-(Command-Line)">Converting TSV to Parquet</a></li>
+      </ul>
+    </li>
+    <li><a href="#Contributing">Contributing</a></li>
+    <li><a href="#License">License</a></li>
+    <li><a href="#Contact">Contact</a></li>
+  </ol>
+</details>
 
 
-
-## Overview
+## About The Project
 
 This Python package provides tools to interact with the UK Biobank data. It includes functionalities for translating coded values to human-readable values, converting UK Biobank TSV files to Parquet format, and various utility functions for data analysis.
 
-## Features
+### Features
 
 - **UKB_DataDict Class**: Translates coded values to human-readable values.
 - **TSV to Parquet Conversion**: Converts UK Biobank TSV files to Parquet format for efficient storage and processing.
 
-## Installation
+## Getting Started
 
 ### Prerequisites
 
 - Python 3.9, 3.10, 3.11, or 3.12
+
+### Installation
 
 ```bash
 pip install git+https://github.com/naomihindriks/ukbutils.git
@@ -73,9 +101,138 @@ The `UKB_DataDict` class helps in working with UK Biobank Data Dictionary HTML f
 ### Converting TSV to Parquet (Command Line)
 
 Convert a UK Biobank TSV file to Parquet format using the command line.
-This convertion can be done with and without a configuration file.
+This convertion can be done with and without a configuration file. When running
+the ocnvertion a collection of parquet files will be created, which together make 
+up the full dataset. Read more about the parquet fomrat [here](https://parquet.apache.org)
+
+#### Aquiring a configuration file
+
+Running the following command will store a configuration file template at the desired destination.
+
+```bash
+get-ukb-to-parquet-config-template path_to_store.yaml
+```
+
+##### Configuration options
+
+| option    | description | example |
+| -------- | ------- | ------- |
+| out_path  | Path where the output parquet files will be stored | <pre>out_path: "/home/path_to_store/"</pre> will result in the different partition fies (part.0.parquet, part.1.parquet, etc.) to be stored in /home/path_to_store/.  If this directory already exists the force option is needed, see below.|
+| nrows | Number of rows to include in the converted file, if set to 0 include all rows | <pre>nrows: 100</pre> only includes the first 100 rows of the TSV file in the converted parquet format. |
+| npartitions | Number of partitions to repartition to if set to 0 the value will be ignored, each aprtition will be stored as a seperate parquet file in the output directory | <pre>nrows: 50</pre> will result in 50 partitions |
+| tab_offset | Number of extra tabs expected at the start or end of each data row in the input TSV file. Use a positive number to indicate tabs at the start of each data row or a negative number to indicate tabs at the start each data row | <pre>tab_offset: -1</pre> Indicates it is expected that the last column in the input file is empty and does not have a column name, this option will add a dummy column name to the list of column names, to make sure that the empty column does not cause problems. |
+| force | Force the operation if output directory is not empty | <pre>force: True</pre> will run the converion p[rocess even when the output directory is not empty, it could cause preexisting files to be overwritten. |
+| dtype_dict | In the convertion process the TSV file is read in with [Dask](https://docs.dask.org/en/latest/generated/dask.dataframe.read_parquet.html#dask.dataframe.read_parquet), with this option you can set which dtypes are to be expected for each data type as they orrur in the "UK Biobank : Data Dictionary", that can be downloaded specifically for your UK Biobank dataset [see the UK Biobank data access guide](https://uk-biobank.gitbook.io/data-access-guide/the-main-dataset/running-the-helper-programs/converting-a-main-dataset-to-your-preferred-format-ukbconv/creating-a-data-dictionary) | <pre>dtype_dict:<br>    Type:<br>         Sequence: "int"<br>    Encoding_type:<br>        Integer: "float"</pre><br>Will cause data fields marked as "Sequence" in the data dict html file to be read in as the int [dtype](https://pandas.pydata.org/docs/user_guide/basics.html#dtypes), and encoded categorical types (wiht encoding type integer) will be read in as float dtypes, when they exceed the maximum number of categories (see the max_categories option below) |
+| categorical_type | Fields in the UK Biobank data dict html file that are marked the types specified in this option will be considred to be categorical in nature, and when maximum number of categories is not exceeded, will be stored as such | <pre>categorical_type:<br>    - "Categorical (single)"<br>    - "Categorical (multiple)"</pre> This will result in fields marked as Categorical (single) or Categorical (multiple) to be processed and stored as categorical variables. |
+| max_categories | When a field marked as categorical exceeds this number of categories it will not be processed as a categorical, but as the type specified as encoding type. | <pre>max_categories: 256</pre> This will store categoricals with more than 256 categories as their encoding type instead of as a categorical. |
+| settings | The settings that will be used in the [dask to_parquet](https://docs.dask.org/en/stable/generated/dask.dataframe.to_parquet.html) method, things like type of compression can be specified here | <pre>settings:<br>    compression: "snappy"<br>    engine: "pyarrow"<br>    write_index: True<br>    write_metadata_file: False<br>    overwrite: False</pre> These parameter will be passed directly to the to_parquet method called on the dask dataframe created from the input data. |
+
+#### Converting with a configuration file
+
+Once you have configured your own options in your configuration file you can easily convert the UK Biobank TSV file to parquet format in the following manner:
 
 
 ```bash
-ukb-to-parquet 
+ukb-parquet-from-config <path/to/ukb_tsv_file> <path/to/html_data_dict> <path/to/config_file>
 ```
+
+It is optional add the following arguments to set logging options. Use `ukb-parquet-from-config --help` for more information on these options.
+
+- --log-dir
+- --log-file-name
+- --log-level
+
+#### Converting without a configuration file
+
+It is also possible to convert your UK Biobank tsv file without a configuration file. With the `ukb-to-parquet` command line utility you can specify almost every configuration option directly inside the command. The simplest way of using the converter without a configuration file is as follows, in this way every configuration option will be set to a default.
+
+```bash
+ukb-to-parquet <path/to/ukb_tsv_file> <path/to/out_dir> <path/to/html_data_dict>
+```
+
+The following options can be used with this command:
+
+- -e ENCODING / --encoding ENCODING
+- -n NROWS / --nrows NROWS
+- -r REPARTITION / --repartition REPARTITION
+- -m MAX_CATEGORIES / --max_categories MAX_CATEGORIES
+- -dt [DTYPE_DICT_TYPE ...] / --dtype_dict_type [DTYPE_DICT_TYPE ...]
+- -de [DTYPE_DICT_ENCODING_TYPE ...] / --dtype_dict_encoding_type [DTYPE_DICT_ENCODING_TYPE ...]...
+- -s [SETTINGS ...] / --settings [SETTINGS ...]
+- -t TAB_OFFSET / --tab_offset OFFSET
+- -f / --force
+- --log-dir LOGDIR
+- --log-file-name LOGFILE
+- --log-level LOGLEVEL
+
+Use `ukb-to-parquet --help` for more information.
+
+#### Convertion result
+
+As a result of the convertion process a dictionary will be created with the name specified out_dir/out_path name. This directory will be filled with the partitioned UK Biobank parquet files (e.g. part.0.parquet, part.1.parquet, part.2.parquet etc.). Next to these parquet files (and possibly a "_metadata" and "_common_metadata" file depending on settings given) a README.txt file will be created that specifies which settengs were used for convertion in the convertion process, and when the convertion took place.
+
+## Contributing
+
+We welcome contributions! Follow these steps to contribute:
+
+### Prerequisites
+
+- Python (3.9, 3.10, 3.11, or 3.12)
+- Conda
+
+### Steps to Contribute
+
+1. **Fork the repository** on GitHub.
+
+2. **Clone your forked repository** to your local machine:
+
+    ```bash
+    git clone https://github.com/your-username/ukbutils.git
+    cd ukbutils
+    ```
+
+3. **Create a new branch** for your feature or bugfix:
+
+    ```bash
+    git checkout -b feature-name
+    ```
+
+4. **Create a Conda environment** and install the dependencies:
+
+    ```bash
+    conda env create -f environment.yml -n ukbutils-env
+    conda activate ukbutils-env
+    ```
+
+5. **Install your local version in development mode**
+
+    ```bash
+    pip install -e .
+    ```
+
+6. **Make your changes** to the codebase.
+
+7. **Commit your changes** with a clear message:
+
+    ```bash
+    git commit -m "Description of your changes"
+    ```
+
+8. **Push your changes** to your forked repository:
+
+    ```bash
+    git push origin feature-name
+    ```
+
+9. **Create a Pull Request** on the original repository. Include a detailed description of your changes and any related issues.
+
+
+During development you can run pytest to run the unit tests, black or flake8 for linting/formatting, and tox for checking against multiple python versions. 
+
+## License
+
+Distributed under the MIT License. See [LICENSE](https://github.com/naomihindriks/ukbutils/blob/main/LICENSE) for more information
+
+## Contact
+
+Naomi Hindriks - n.j.hindriks@st.hanze.com
