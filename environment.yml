@@ -1,4 +1,3 @@
-name: umcg-nhindriks_ukbutils
 channels:
   - conda-forge
   - defaults
@@ -143,7 +142,7 @@ dependencies:
   - python_abi=3.12=4_cp312
   - pytz=2023.4=pyhd8ed1ab_0
   - pyyaml=6.0.1=py312h98912ed_1
-  - rdma-core=50.0=hd3aeb46_0
+  - rdma-core
   - re2=2023.06.02=h2873b5e_0
   - readline=8.2=h8228510_1
   - s2n=1.4.1=h06160fa_0
@@ -171,6 +170,3 @@ dependencies:
   - zipp=3.17.0=pyhd8ed1ab_0
   - zlib=1.2.13=hd590300_5
   - zstd=1.5.5=hfc55251_0
-  - pip:
-      - ukbutils==0.0.1
-prefix: /groups/umcg-endocrinology/tmp01/programs/anaconda3/envs/umcg-nhindriks_ukbutils
