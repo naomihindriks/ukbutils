@@ -191,7 +191,7 @@ class UKB_DataDict:
         Args:
             main_table (pd.DataFrame): The main data dictionary table to process.
         """
-        main_table["Column"] = main_table["Count"].astype("Int64")
+        main_table["Column"] = main_table["Column"].astype("Int64")
         main_table["Count"] = main_table["Count"].astype("Int64")
         main_table["Encoding_id"] = main_table["Description"].str.extract(
             r"Uses data-coding (\d+)"
@@ -275,7 +275,7 @@ class UKB_DataDict:
                 f" for encoding id {encoding_id}"
             )
 
-        encoding_table = pd.read_table(encoding_filename, skiprows=7)
+        encoding_table = pd.read_table(encoding_filename, skiprows=7, na_values=None)
         encoding_table = encoding_table.rename(columns={"coding": "Code"})
         return encoding_table
 
@@ -302,7 +302,7 @@ class UKB_DataDict:
                 f" ID: {encoding_id}"
             )
 
-        return pd.read_html(StringIO(str(encoding_table_html)))[0]
+        return pd.read_html(StringIO(str(encoding_table_html)), na_values=None)[0]
 
     def _encoding_id_is_valid(self, encoding_id):
         """
