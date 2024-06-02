@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "ukbutils"
 version = "0.0.1"
 description = 'Functions and CLI tools for working with UK Biobank main dataset'
-readme = {file = "README.txt", content-type = "text/markdown"}
+readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.9"
 license = {file = "LICENSE"}
 keywords = ["UK Biobank", "parquet", "file conversion"]
@@ -32,8 +32,7 @@ dependencies = [
     'dask>=2024.1.1',
     'lxml>=5.0.0',
     "pyarrow>=15.0.0",
-    "numpy>=1.26.0",
-    
+    "numpy>=1.26.0",   
 ]
 
 [project.scripts]
