@@ -7,7 +7,7 @@ name = "ukbutils"
 version = "0.0.1"
 description = 'Functions and CLI tools for working with UK Biobank main dataset'
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = ">=3.9, <= 3.12"
+requires-python = ">=3.9, < 3.13"
 license = {file = "LICENSE"}
 keywords = ["UK Biobank", "parquet", "file conversion"]
 authors = [
